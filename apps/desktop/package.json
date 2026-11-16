@@ -6,7 +6,9 @@
   "type": "module",
   "main": "out/main/index.js",
   "scripts": {
+    "predev": "node ../../scripts/check-setup.mjs",
     "dev": "electron-vite dev",
+    "prebuild": "node ../../scripts/check-setup.mjs",
     "build": "electron-vite build",
     "package": "electron-vite build && electron-builder --linux dir"
   },
