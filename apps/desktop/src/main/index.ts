@@ -203,8 +203,19 @@ async function runChat(req: ChatStart) {
 
 // ---------- IPC ----------
 
+/** Only Basalt's own renderer may call into the main process. */
+function trustedSender(e: Electron.IpcMainInvokeEvent): boolean {
+  const url = e.senderFrame?.url ?? '';
+  if (!win || e.sender.id !== win.webContents.id) return false;
+  if (isDev) return url.startsWith(process.env.ELECTRON_RENDERER_URL!);
+  return url.startsWith(pathToFileURL(join(here, '../renderer/')).toString());
+}
+
 function handle(channel: string, fn: (...args: any[]) => unknown) {
-  ipcMain.handle(channel, async (_e, ...args) => fn(...args));
+  ipcMain.handle(channel, async (e, ...args) => {
+    if (!trustedSender(e)) throw new Error(`Blocked ${channel} from an untrusted frame`);
+    return fn(...args);
+  });
 }
 
 function registerIpc() {

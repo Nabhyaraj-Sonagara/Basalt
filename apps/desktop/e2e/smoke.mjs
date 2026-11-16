@@ -12,9 +12,11 @@ const userData = mkdtempSync(join(tmpdir(), 'basalt-ud-'));
 const out = process.argv[2] ?? join(root, 'apps/desktop/e2e/screenshots');
 mkdirSync(out, { recursive: true });
 
+// BASALT_BIN runs an unfused packaged build. Fused builds ignore --inspect; use packaged-check.cjs.
+const bin = process.env.BASALT_BIN;
 const app = await electron.launch({
-  executablePath: join(root, 'node_modules/electron/dist/electron'),
-  args: [join(root, 'apps/desktop'), '--no-sandbox', `--user-data-dir=${userData}`, `--hive=${join(hive, 'Sample')}`],
+  executablePath: bin ?? join(root, 'node_modules/electron/dist/electron'),
+  args: [...(bin ? [] : [join(root, 'apps/desktop')]), '--no-sandbox', `--user-data-dir=${userData}`, `--hive=${join(hive, 'Sample')}`],
 });
 const page = await app.firstWindow();
 const errors = [];
@@ -24,5 +26,5 @@ await page.setViewportSize({ width: 1360, height: 860 });
 await page.waitForSelector('.workspace', { timeout: 20000 });
 await page.waitForTimeout(1200);
 await page.screenshot({ path: join(out, 'smoke.png') });
-console.log('errors:', errors);
+console.log('title:', await page.title(), '| notes in tree:', await page.locator('.tree-row').count(), '| errors:', errors);
 await app.close();
