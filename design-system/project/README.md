@@ -41,13 +41,14 @@ The hexagon is Basalt's round. Wherever another system reaches for a circle or a
 - A regular hexagon is 1.1547 × as wide as tall (flat) or as tall as wide (pointy). Don't squash hexagons to fit a box; change the box.
 - Rectangles stay crisp: `radius-xs` (2px) on inline code, keys and highlights; `radius-sm` (4px) on buttons, inputs, rows and tabs; `radius-md` (8px) on cards, callouts, menus and the palette. Nothing is fully rounded.
 - Honeycomb patterns (tiles of `hex-flat` in `honey-soft` with a few `wax` accents on `surface`, thinning out by dropping cells, never by fading) are for empty states (`EmptyState`), onboarding and marketing. Never behind note text.
+- Controls follow the same rule: the `Toggle` is a hex-ended track with a hexagonal thumb, progress is a row of hex cells filling with honey (`Toast`).
 - Don't stack more than one hex motif in a single control, and don't use hexagons as bullets in prose.
 
 ## Space, layout, elevation, motion
 
 - 4px base: `space-1` 4, `space-2` 8, `space-3` 12, `space-4` 16, `space-6` 24, `space-8` 32, `space-12` 48. Columns stack in fours: keep paddings on the scale.
 - Workspace: sidebar 248px on `surface-sunken`, editor centred on `surface` with `space-12` top padding, optional right panel 272px for comb and backlinks; panes divided by 1px `line`, not shadows.
-- Basalt is matte. `shadow-sm` for raised cards and the active tab, `shadow-lg` for anything floating (palette, menus, `HoverPreview`). No glows, glass, blur or gradients.
+- Basalt is matte. `shadow-sm` for raised cards and the active tab, `shadow-lg` for anything floating (palette, menus, `HoverPreview`, `Toast`). No glows, glass, blur or gradients.
 - Focus: rectangles show `focus-ring` (a 2px surface gap then 2px solid `focus`). Hex-clipped controls take a 2px solid `focus` outline on their unclipped wrapper, because clip-path cuts shadows.
 - Motion is unhurried and settles without bouncing: `duration-fast` for hover and press, `duration-base` for menus, palettes and a task cell filling, always `ease-settle`. Respect reduced-motion by removing transforms, not colour changes.
 
@@ -59,11 +60,11 @@ The hexagon is Basalt's round. Wherever another system reaches for a circle or a
 
 ## Logo
 
-- The mark is a hexagonal basalt column with a honey cap and one drip (Logos group). Use the `Logo` component for the lockup (mark + lowercase "basalt" in `display` 700).
-- `basalt-app-icon.svg` is the dock, favicon and store tile: the column on a stone hexagon. Never put the mark in a rounded square or a circle.
+- The mark is a plain hexagonal basalt column: three stone faces, one cross-joint and a lit top (Logos group). It carries no honey — the stone is the brand's name, honey is its colour, and they meet only in the app icon. Use the `Logo` component for the lockup (mark + lowercase "basalt" in `display` 700).
+- `basalt-app-icon.svg` is the dock, favicon and store tile: the stone column on a `honey` hexagon. Never put the mark in a rounded square or a circle.
 - `basalt-causeway.svg` (three columns) is illustration for splash, onboarding and empty hives; it is not the logo.
-- Don't recolour the cap, add gloss or a glow, outline the mark, or rotate it.
+- Don't add honey, drips or colour to the column, add gloss or a glow, outline the mark, or rotate it.
 
 ## Components
 
-`window.Basalt` (React 18): `Logo`, `Icon`, `Button`, `Kbd`, `Tag`, `Task`, `Wikilink`, `Callout`, `HexAvatar`, `SearchField`, `TreeItem`, `Tabs`, `CommandPalette`, `Comb`, `EmptyState`, `HoverPreview`. Load `tokens.css` and `components/bundle.css` first; set `data-theme="comb"` or `data-theme="basalt"` on `<html>`. The Workspace card shows them composed into the app shell.
+`window.Basalt` (React 18): `Logo`, `Icon`, `Button`, `Kbd`, `Tag`, `Task`, `Wikilink`, `Callout`, `HexAvatar`, `SearchField`, `TreeItem`, `Tabs`, `CommandPalette`, `Comb`, `EmptyState`, `HoverPreview`, `SettingsGroup`, `SettingRow`, `Toggle`, `Select`, `Toast`, `ToastStack`. Load `tokens.css` and `components/bundle.css` first; set `data-theme="comb"` or `data-theme="basalt"` on `<html>`. The Workspace card shows them composed into the app shell.

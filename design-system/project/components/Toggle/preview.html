@@ -1,0 +1,15 @@
+<!-- @dsCard group="Settings" height=72 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Toggle — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Basalt, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'bs-row', style: { gap: '24px', font: '500 13px/20px var(--font-sans)', color: 'var(--ink-muted)' } },
+    h('span', { className: 'bs-row', style: { padding: 0, gap: '8px' } }, h(B.Toggle, { label: 'On', defaultChecked: true }), 'On'),
+    h('span', { className: 'bs-row', style: { padding: 0, gap: '8px' } }, h(B.Toggle, { label: 'Off' }), 'Off'),
+    h('span', { className: 'bs-row', style: { padding: 0, gap: '8px' } }, h(B.Toggle, { label: 'Disabled', defaultChecked: true, disabled: true }), 'Disabled')));
+</script>
+</body>
+</html>

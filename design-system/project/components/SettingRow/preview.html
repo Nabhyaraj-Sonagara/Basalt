@@ -1,0 +1,23 @@
+<!-- @dsCard group="Settings" height=640 subtitle="SettingsGroup with SettingRow, Toggle, Select and Button controls" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>SettingRow — preview</title>
+<style> .page { padding: var(--space-8); background: var(--surface); } </style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Basalt, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    h('div', { className: 'page' },
+      h(B.SettingsGroup, { title: 'Editor', description: 'How notes look while you write.' },
+        h(B.SettingRow, { label: 'Readable line length', description: 'Keep lines to about 68 characters, however wide the window.' }, h(B.Toggle, { defaultChecked: true })),
+        h(B.SettingRow, { label: 'Spellcheck', description: 'Underline words the system dictionary doesn’t know.' }, h(B.Toggle, null)),
+        h(B.SettingRow, { label: 'New notes open in', description: 'Reading view hides the Markdown until you click into a block.' }, h(B.Select, { defaultValue: 'edit', options: [{ value: 'edit', label: 'Editing view' }, { value: 'read', label: 'Reading view' }] })),
+        h(B.SettingRow, { label: 'Comb view', badge: 'beta', description: 'Lay linked notes out on a honeycomb in the right panel.' }, h(B.Toggle, { defaultChecked: true }))),
+      h(B.SettingsGroup, { title: 'Hive' },
+        h(B.SettingRow, { label: 'Hive folder', description: h(React.Fragment, null, 'Notes are plain Markdown files in ', h('code', null, '~/Notes/Antrim coast')) }, h(B.Button, { variant: 'secondary', size: 'sm' }, 'Change folder')),
+        h(B.SettingRow, { label: 'Delete this hive', tone: 'danger', description: 'Removes the hive from Basalt. Your Markdown files stay on disk.' }, h(B.Button, { variant: 'danger', size: 'sm' }, 'Delete hive')))));
+</script>
+</body>
+</html>

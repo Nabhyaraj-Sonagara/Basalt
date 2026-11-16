@@ -1,0 +1,14 @@
+<!-- @dsCard group="Settings" height=72 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Select — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Basalt, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'bs-row' },
+    h(B.Select, { 'aria-label': 'Theme', defaultValue: 'comb', options: [{ value: 'comb', label: 'Comb (light)' }, { value: 'basalt', label: 'Basalt (dark)' }, { value: 'system', label: 'Match system' }] }),
+    h(B.Select, { 'aria-label': 'Daily note folder', options: ['Daily', 'Journal', 'Hive root'] })));
+</script>
+</body>
+</html>

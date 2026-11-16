@@ -1,0 +1,20 @@
+<!-- @dsCard group="Feedback" height=360 subtitle="Neutral with undo, success, progress and danger; stacked bottom-right" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Toast — preview</title>
+<style> .stage { display: flex; justify-content: flex-end; align-items: flex-end; height: 360px; box-sizing: border-box; padding: var(--space-4); background: var(--surface); } </style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Basalt, h = React.createElement, noop = function () {};
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    h('div', { className: 'stage' },
+      h(B.ToastStack, null,
+        h(B.Toast, { title: 'Moved 3 notes to Field notes', action: { label: 'Undo', onClick: noop }, onClose: noop }),
+        h(B.Toast, { tone: 'success', title: 'Hive synced', onClose: noop }, '418 notes are up to date on this device.'),
+        h(B.Toast, { tone: 'progress', title: 'Importing a Markdown folder', progress: 0.6 }, '72 of 120 notes'),
+        h(B.Toast, { tone: 'danger', title: 'Couldn’t sync 2 notes', action: { label: 'Retry', onClick: noop }, onClose: noop }, 'They’re saved here; Basalt will retry when you’re online.'))));
+</script>
+</body>
+</html>

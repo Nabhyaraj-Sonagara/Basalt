@@ -172,3 +172,53 @@ button.bs-tag-hit:hover .bs-tag:not(.bs-tag-active), a.bs-tag-hit:hover .bs-tag:
 .bs-hover-unresolved .bs-hover-well { background: var(--surface-hover); color: var(--ink-muted); }
 .bs-hover-unresolved .bs-hover-title { color: var(--ink-muted); }
 .bs-hover-empty { margin: 0 0 var(--space-3); font: 400 15px/24px var(--font-serif); color: var(--ink-muted); }
+
+/* Toggle: a hex-ended track with a hexagonal thumb. The button is unclipped and carries focus. */
+.bs-toggle { flex: none; display: inline-flex; padding: 0; border: 0; background: none; cursor: pointer; border-radius: var(--radius-sm); }
+.bs-toggle:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.bs-toggle:disabled { cursor: not-allowed; opacity: .5; }
+.bs-toggle-track { position: relative; display: block; width: 40px; height: 22px; clip-path: var(--hex-chip); background: var(--line-strong); transition: background-color var(--duration-base) var(--ease-settle); }
+.bs-toggle-thumb { position: absolute; top: 2px; left: 5px; width: 16px; height: 18px; clip-path: var(--hex-pointy); background: var(--surface-raised); transition: transform var(--duration-base) var(--ease-settle), background-color var(--duration-base) var(--ease-settle); }
+.bs-toggle-on .bs-toggle-track { background: var(--honey); }
+.bs-toggle-on .bs-toggle-thumb { transform: translateX(14px); background: var(--on-honey); }
+
+/* Select */
+.bs-select { position: relative; display: inline-flex; }
+.bs-select select { appearance: none; -webkit-appearance: none; height: 32px; min-width: 160px; padding: 0 32px 0 var(--space-3); background: var(--surface-raised); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); font: 500 14px/20px var(--font-sans); cursor: pointer; }
+.bs-select select:hover { background: var(--surface-hover); }
+.bs-select select:focus-visible { outline: 2px solid transparent; box-shadow: var(--focus-ring); }
+.bs-select-caret { position: absolute; right: 10px; top: 50%; margin-top: -7px; transform: rotate(90deg); color: var(--ink-muted); pointer-events: none; }
+
+/* SettingsGroup and SettingRow */
+.bs-settings { max-width: 720px; }
+.bs-settings + .bs-settings { margin-top: var(--space-8); }
+.bs-settings-title { margin: 0; font: 650 22px/28px var(--font-display); letter-spacing: -0.01em; color: var(--ink); }
+.bs-settings-desc { margin: var(--space-1) 0 0; font: 500 14px/20px var(--font-sans); color: var(--ink-muted); }
+.bs-settings-card { margin-top: var(--space-3); background: var(--surface-raised); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+.bs-setting { display: flex; align-items: center; gap: var(--space-6); min-height: 32px; padding: var(--space-4); }
+.bs-setting + .bs-setting { border-top: 1px solid var(--line); }
+.bs-setting-text { flex: 1; min-width: 0; }
+.bs-setting-label { display: flex; align-items: center; gap: var(--space-2); font: 650 14px/20px var(--font-sans); color: var(--ink); }
+.bs-setting-desc { margin-top: 2px; max-width: 520px; font: 500 13px/18px var(--font-sans); color: var(--ink-muted); }
+.bs-setting-desc code { font: 400 12px/18px var(--font-mono); color: var(--ink); background: var(--surface-sunken); padding: 1px 4px; border-radius: var(--radius-xs); }
+.bs-setting-control { flex: none; display: flex; align-items: center; gap: var(--space-2); }
+.bs-setting-danger .bs-setting-label { color: var(--ember); }
+.bs-setting-disabled .bs-setting-text { opacity: .55; }
+
+/* Toast: floating and matte; tone lives in the hex well and the words, never in a coloured bar */
+@keyframes bs-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.bs-toasts { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
+.bs-toast { display: flex; align-items: flex-start; gap: var(--space-3); width: 380px; max-width: 100%; box-sizing: border-box; padding: var(--space-3) var(--space-2) var(--space-3) var(--space-3); background: var(--surface-raised); color: var(--ink); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); animation: bs-toast-in var(--duration-base) var(--ease-settle); }
+@media (prefers-reduced-motion: reduce) { .bs-toast { animation: none; } }
+.bs-toast-well { flex: none; display: inline-grid; place-items: center; width: 28px; height: 32px; clip-path: var(--hex-pointy); background: var(--surface-hover); color: var(--ink-muted); }
+.bs-toast-success .bs-toast-well { background: var(--moss-soft); color: var(--moss); }
+.bs-toast-danger .bs-toast-well { background: var(--ember-soft); color: var(--ember); }
+.bs-toast-progress .bs-toast-well { background: var(--honey-soft); color: var(--honey-text); }
+.bs-toast-text { flex: 1; min-width: 0; padding-top: 6px; }
+.bs-toast-title { font: 650 14px/20px var(--font-sans); }
+.bs-toast-desc { margin-top: 2px; font: 500 13px/18px var(--font-sans); color: var(--ink-muted); }
+.bs-toast-action.bs-btn { color: var(--honey-text); font-weight: 650; margin-top: 2px; }
+.bs-toast-close.bs-btn { margin-top: 2px; }
+.bs-toast-cells { display: flex; gap: 3px; margin-top: var(--space-2); }
+.bs-toast-cell { width: 10px; height: 12px; clip-path: var(--hex-pointy); background: var(--line); transition: background-color var(--duration-base) var(--ease-settle); }
+.bs-toast-cell-on { background: var(--honey); }

@@ -53,8 +53,27 @@ export declare function EmptyState(props: EmptyStateProps): React.ReactElement;
 export interface HoverPreviewProps { title: string; path?: string; children?: React.ReactNode; heading?: string; tags?: string[]; meta?: string; backlinks?: number; maxLines?: number; onOpen?: () => void; unresolved?: boolean; onCreate?: () => void; style?: React.CSSProperties; className?: string }
 export declare function HoverPreview(props: HoverPreviewProps): React.ReactElement;
 
+export interface ToggleProps { checked?: boolean; defaultChecked?: boolean; onChange?: (checked: boolean) => void; disabled?: boolean; label?: string; id?: string; 'aria-labelledby'?: string; className?: string }
+export declare function Toggle(props: ToggleProps): React.ReactElement;
+
+export type SelectOption = string | { value: string; label: string };
+export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> { options: SelectOption[] }
+export declare function Select(props: SelectProps): React.ReactElement;
+
+export interface SettingsGroupProps { title?: React.ReactNode; description?: React.ReactNode; children?: React.ReactNode; className?: string }
+export declare function SettingsGroup(props: SettingsGroupProps): React.ReactElement;
+
+export interface SettingRowProps { label: React.ReactNode; description?: React.ReactNode; badge?: string; tone?: 'default' | 'danger'; disabled?: boolean; children?: React.ReactNode; className?: string }
+export declare function SettingRow(props: SettingRowProps): React.ReactElement;
+
+export interface ToastProps { tone?: 'neutral' | 'success' | 'progress' | 'danger'; title: React.ReactNode; children?: React.ReactNode; action?: { label: string; onClick: () => void }; onClose?: () => void; progress?: number; icon?: IconName; className?: string }
+export declare function Toast(props: ToastProps): React.ReactElement;
+
+export interface ToastStackProps { children?: React.ReactNode; className?: string }
+export declare function ToastStack(props: ToastStackProps): React.ReactElement;
+
 declare global {
   interface Window {
-    Basalt: { Logo: typeof Logo; Icon: typeof Icon; Button: typeof Button; Kbd: typeof Kbd; Tag: typeof Tag; Task: typeof Task; Wikilink: typeof Wikilink; Callout: typeof Callout; HexAvatar: typeof HexAvatar; SearchField: typeof SearchField; TreeItem: typeof TreeItem; Tabs: typeof Tabs; CommandPalette: typeof CommandPalette; Comb: typeof Comb; EmptyState: typeof EmptyState; HoverPreview: typeof HoverPreview };
+    Basalt: { Logo: typeof Logo; Icon: typeof Icon; Button: typeof Button; Kbd: typeof Kbd; Tag: typeof Tag; Task: typeof Task; Wikilink: typeof Wikilink; Callout: typeof Callout; HexAvatar: typeof HexAvatar; SearchField: typeof SearchField; TreeItem: typeof TreeItem; Tabs: typeof Tabs; CommandPalette: typeof CommandPalette; Comb: typeof Comb; EmptyState: typeof EmptyState; HoverPreview: typeof HoverPreview; Toggle: typeof Toggle; Select: typeof Select; SettingsGroup: typeof SettingsGroup; SettingRow: typeof SettingRow; Toast: typeof Toast; ToastStack: typeof ToastStack };
   }
 }

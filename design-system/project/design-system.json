@@ -110,15 +110,15 @@
     "Logos": {
       "files": {
         "basalt-app-icon.svg": {
-          "blob": "9f7ce1b0bbd722d3c0f84048c161413c",
+          "blob": "8607cd419af4260111e3bf92a2d9d311",
           "name": "basalt-app-icon.svg",
-          "size": 1032,
+          "size": 812,
           "type": "image/svg+xml"
         },
         "basalt-causeway.svg": {
-          "blob": "fbef479a6c8945484d1e3758ea33e89b",
+          "blob": "f522debfe66301381ab9cbf67c911ed3",
           "name": "basalt-causeway.svg",
-          "size": 1412,
+          "size": 1229,
           "type": "image/svg+xml"
         },
         "basalt-mark-mono.svg": {
@@ -128,9 +128,9 @@
           "type": "image/svg+xml"
         },
         "basalt-mark.svg": {
-          "blob": "014e4092eba210a2775fdd0e103e8c21",
+          "blob": "b48f77ac2a610bb64970e09316b8b889",
           "name": "basalt-mark.svg",
-          "size": 850,
+          "size": 715,
           "type": "image/svg+xml"
         }
       },
@@ -159,9 +159,9 @@
   ],
   "lastChange": {
     "by": "Claude",
-    "at": "2026-11-16T08:31:38Z",
+    "at": "2026-11-16T08:39:03Z",
     "via": "Claude Code",
-    "note": "Vaults renamed to hives; added EmptyState and HoverPreview."
+    "note": "Logo is now a plain basalt column (honey moves to the app icon tile); added SettingRow, Toggle, Select and Toast."
   },
   "layout": "files",
   "libraries": [

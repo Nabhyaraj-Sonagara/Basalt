@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"Basalt","components":[{"name":"Logo"},{"name":"Icon"},{"name":"Button"},{"name":"Kbd"},{"name":"Tag"},{"name":"Task"},{"name":"Wikilink"},{"name":"Callout"},{"name":"HexAvatar"},{"name":"SearchField"},{"name":"TreeItem"},{"name":"Tabs"},{"name":"CommandPalette"},{"name":"Comb"},{"name":"EmptyState"},{"name":"HoverPreview"}]} */
+/* @ds-bundle: {"format":4,"namespace":"Basalt","components":[{"name":"Logo"},{"name":"Icon"},{"name":"Button"},{"name":"Kbd"},{"name":"Tag"},{"name":"Task"},{"name":"Wikilink"},{"name":"Callout"},{"name":"HexAvatar"},{"name":"SearchField"},{"name":"TreeItem"},{"name":"Tabs"},{"name":"CommandPalette"},{"name":"Comb"},{"name":"EmptyState"},{"name":"HoverPreview"},{"name":"SettingRow"},{"name":"Toggle"},{"name":"Select"},{"name":"Toast"}]} */
 (function () {
   var React = window.React;
   var h = React.createElement;
@@ -54,10 +54,9 @@
   function Mark(size) {
     return h('svg', { className: 'bs-logo-mark', width: size, height: size, viewBox: '0 0 64 64', 'aria-hidden': true,
       dangerouslySetInnerHTML: { __html:
-        '<path fill="#5a5249" d="M12 14 L22 21 V43 L12 36 Z"/><path fill="#3a352f" d="M22 21 H42 V43 H22 Z"/><path fill="#2a2622" d="M42 21 L52 14 V36 L42 43 Z"/>' +
-        '<path fill="#5a5249" d="M12 38.5 L22 45.5 V57 L12 50 Z"/><path fill="#3a352f" d="M22 45.5 H42 V57 H22 Z"/><path fill="#2a2622" d="M42 45.5 L52 38.5 V50 L42 57 Z"/>' +
-        '<path fill="#e8a317" d="M12 14 L22 7 H42 L52 14 L42 21 H22 Z"/><path fill="#f6c94e" d="M20 14 L26 9.8 H38 L44 14 L38 18.2 H26 Z"/>' +
-        '<path fill="#e8a317" d="M22 21 H42 V23 Q42 25 40 25 H36 V31 A2 2 0 0 1 32 31 V25 H24 Q22 25 22 23 Z"/>' } });
+        '<path fill="#6b6259" d="M12 14 L22 21 V43 L12 36 Z"/><path fill="#48423b" d="M22 21 H42 V43 H22 Z"/><path fill="#34302b" d="M42 21 L52 14 V36 L42 43 Z"/>' +
+        '<path fill="#6b6259" d="M12 38.5 L22 45.5 V57 L12 50 Z"/><path fill="#48423b" d="M22 45.5 H42 V57 H22 Z"/><path fill="#34302b" d="M42 45.5 L52 38.5 V50 L42 57 Z"/>' +
+        '<path fill="#9a9083" d="M12 14 L22 7 H42 L52 14 L42 21 H22 Z"/><path fill="#887e72" d="M20 14 L26 9.8 H38 L44 14 L38 18.2 H26 Z"/>' } });
   }
   function Logo(props) {
     var size = props.size || 32;
@@ -254,13 +253,22 @@
   }
 
   /* ---------- EmptyState ---------- */
-  var CAUSEWAY =
-    '<path fill="#5a5249" d="M8 34 L18 41 V69 L8 62 Z"/><path fill="#3a352f" d="M18 41 H38 V69 H18 Z"/><path fill="#2a2622" d="M38 41 L48 34 V62 L38 69 Z"/><path fill="#4a443d" d="M8 34 L18 27 H38 L48 34 L38 41 H18 Z"/>' +
-    '<path fill="#5a5249" d="M72 44 L82 51 V73 L72 66 Z"/><path fill="#3a352f" d="M82 51 H102 V73 H82 Z"/><path fill="#2a2622" d="M102 51 L112 44 V66 L102 73 Z"/><path fill="#4a443d" d="M72 44 L82 37 H102 L112 44 L102 51 H82 Z"/>' +
-    '<path fill="#5a5249" d="M40 18 L50 25 V49 L40 42 Z"/><path fill="#3a352f" d="M50 25 H70 V49 H50 Z"/><path fill="#2a2622" d="M70 25 L80 18 V42 L70 49 Z"/>' +
-    '<path fill="#5a5249" d="M40 44.5 L50 51.5 V75 L40 68 Z"/><path fill="#3a352f" d="M50 51.5 H70 V75 H50 Z"/><path fill="#2a2622" d="M70 51.5 L80 44.5 V68 L70 75 Z"/>' +
-    '<path fill="#e8a317" d="M40 18 L50 11 H70 L80 18 L70 25 H50 Z"/><path fill="#f6c94e" d="M48 18 L54 13.8 H66 L72 18 L66 22.2 H54 Z"/>' +
-    '<path fill="#e8a317" d="M50 25 H70 V27 Q70 29 68 29 H64 V35 A2 2 0 0 1 60 35 V29 H52 Q50 29 50 27 Z"/>';
+  var CAUSEWAY = '<path fill="#6b6259" d="M8 34 L18 41 V69 L8 62 Z"/>' +
+    '<path fill="#48423b" d="M18 41 H38 V69 H18 Z"/>' +
+    '<path fill="#34302b" d="M38 41 L48 34 V62 L38 69 Z"/>' +
+    '<path fill="#7d7468" d="M8 34 L18 27 H38 L48 34 L38 41 H18 Z"/>' +
+    '<path fill="#6b6259" d="M72 44 L82 51 V73 L72 66 Z"/>' +
+    '<path fill="#48423b" d="M82 51 H102 V73 H82 Z"/>' +
+    '<path fill="#34302b" d="M102 51 L112 44 V66 L102 73 Z"/>' +
+    '<path fill="#7d7468" d="M72 44 L82 37 H102 L112 44 L102 51 H82 Z"/>' +
+    '<path fill="#6b6259" d="M40 18 L50 25 V49 L40 42 Z"/>' +
+    '<path fill="#48423b" d="M50 25 H70 V49 H50 Z"/>' +
+    '<path fill="#34302b" d="M70 25 L80 18 V42 L70 49 Z"/>' +
+    '<path fill="#6b6259" d="M40 44.5 L50 51.5 V75 L40 68 Z"/>' +
+    '<path fill="#48423b" d="M50 51.5 H70 V75 H50 Z"/>' +
+    '<path fill="#34302b" d="M70 51.5 L80 44.5 V68 L70 75 Z"/>' +
+    '<path fill="#9a9083" d="M40 18 L50 11 H70 L80 18 L70 25 H50 Z"/>' +
+    '<path fill="#887e72" d="M48 18 L54 13.8 H66 L72 18 L66 22.2 H54 Z"/>';
 
   // Deterministic honeycomb: an oval clearing for the content, cells growing denser toward the edges. No gradients, just fewer cells.
   function combPattern(w, ht, r) {
@@ -320,6 +328,85 @@
         : null);
   }
 
-  var api = { Logo: Logo, Icon: Icon, Button: Button, Kbd: Kbd, Tag: Tag, Task: Task, Wikilink: Wikilink, Callout: Callout, HexAvatar: HexAvatar, SearchField: SearchField, TreeItem: TreeItem, Tabs: Tabs, CommandPalette: CommandPalette, Comb: Comb, EmptyState: EmptyState, HoverPreview: HoverPreview };
+  /* ---------- Toggle ---------- */
+  function Toggle(props) {
+    var controlled = props.checked != null;
+    var st = React.useState(!!props.defaultChecked);
+    var on = controlled ? props.checked : st[0];
+    function flip() {
+      if (props.disabled) return;
+      if (!controlled) st[1](!on);
+      if (props.onChange) props.onChange(!on);
+    }
+    return h('button', {
+      type: 'button', role: 'switch', 'aria-checked': on, 'aria-label': props.label, 'aria-labelledby': props['aria-labelledby'],
+      id: props.id, disabled: props.disabled, onClick: flip,
+      className: cx('bs-toggle', on && 'bs-toggle-on', props.className)
+    }, h('span', { className: 'bs-toggle-track' }, h('span', { className: 'bs-toggle-thumb' })));
+  }
+
+  /* ---------- Select ---------- */
+  function Select(props) {
+    var other = rest(props, ['options', 'className']);
+    return h('span', { className: cx('bs-select', props.className) },
+      h('select', other, (props.options || []).map(function (o) {
+        var opt = typeof o === 'string' ? { value: o, label: o } : o;
+        return h('option', { key: opt.value, value: opt.value }, opt.label);
+      })),
+      h(Icon, { name: 'chevron', size: 14, className: 'bs-select-caret' }));
+  }
+
+  /* ---------- SettingsGroup / SettingRow ---------- */
+  function SettingsGroup(props) {
+    return h('section', { className: cx('bs-settings', props.className) },
+      props.title ? h('h3', { className: 'bs-settings-title' }, props.title) : null,
+      props.description ? h('p', { className: 'bs-settings-desc' }, props.description) : null,
+      h('div', { className: 'bs-settings-card' }, props.children));
+  }
+  var rowSeq = 0;
+  function SettingRow(props) {
+    var idRef = React.useRef(null);
+    if (!idRef.current) idRef.current = 'bs-setting-' + (++rowSeq);
+    var labelId = idRef.current + '-label';
+    var control = props.children;
+    // Give a single control element its accessible name from the row label, unless it already has one.
+    if (React.isValidElement(control) && !control.props['aria-label'] && !control.props['aria-labelledby']) {
+      control = React.cloneElement(control, { 'aria-labelledby': labelId });
+    }
+    return h('div', { className: cx('bs-setting', props.tone === 'danger' && 'bs-setting-danger', props.disabled && 'bs-setting-disabled', props.className) },
+      h('div', { className: 'bs-setting-text' },
+        h('div', { className: 'bs-setting-label', id: labelId },
+          props.label,
+          props.badge ? h(Tag, { tone: 'stone' }, props.badge) : null),
+        props.description ? h('div', { className: 'bs-setting-desc' }, props.description) : null),
+      h('div', { className: 'bs-setting-control' }, control));
+  }
+
+  /* ---------- Toast ---------- */
+  var TOAST_ICON = { neutral: 'note', success: 'task', danger: 'warning', progress: 'info' };
+  function Toast(props) {
+    var tone = props.tone || 'neutral';
+    var cells = 10;
+    var filled = props.progress != null ? Math.round(Math.max(0, Math.min(1, props.progress)) * cells) : 0;
+    return h('div', {
+      className: cx('bs-toast', 'bs-toast-' + tone, props.className),
+      role: tone === 'danger' ? 'alert' : 'status', 'aria-live': tone === 'danger' ? 'assertive' : 'polite'
+    },
+      h('span', { className: 'bs-toast-well' }, h(Icon, { name: props.icon || TOAST_ICON[tone] || 'note', size: 16 })),
+      h('div', { className: 'bs-toast-text' },
+        h('div', { className: 'bs-toast-title' }, props.title),
+        props.children ? h('div', { className: 'bs-toast-desc' }, props.children) : null,
+        props.progress != null
+          ? h('div', { className: 'bs-toast-cells', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': Math.round(props.progress * 100) },
+              Array.apply(null, Array(cells)).map(function (_, i) { return h('span', { key: i, className: cx('bs-toast-cell', i < filled && 'bs-toast-cell-on') }); }))
+          : null),
+      props.action ? h(Button, { variant: 'quiet', size: 'sm', className: 'bs-toast-action', onClick: props.action.onClick }, props.action.label) : null,
+      props.onClose ? h(Button, { variant: 'quiet', size: 'sm', icon: 'close', 'aria-label': 'Dismiss', className: 'bs-toast-close', onClick: props.onClose }) : null);
+  }
+  function ToastStack(props) {
+    return h('div', { className: cx('bs-toasts', props.className), 'aria-label': 'Notifications' }, props.children);
+  }
+
+  var api = { Logo: Logo, Icon: Icon, Button: Button, Kbd: Kbd, Tag: Tag, Task: Task, Wikilink: Wikilink, Callout: Callout, HexAvatar: HexAvatar, SearchField: SearchField, TreeItem: TreeItem, Tabs: Tabs, CommandPalette: CommandPalette, Comb: Comb, EmptyState: EmptyState, HoverPreview: HoverPreview, SettingsGroup: SettingsGroup, SettingRow: SettingRow, Toggle: Toggle, Select: Select, Toast: Toast, ToastStack: ToastStack };
   window.Basalt = Object.assign(window.Basalt || {}, api);
 })();
