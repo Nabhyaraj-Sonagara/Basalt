@@ -1,0 +1,12 @@
+<!-- @dsCard group="Actions" height=64 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Kbd — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Basalt, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'bs-row', style: { color: 'var(--ink-muted)', font: '500 13px/20px var(--font-sans)' } }, h('span', null, h(B.Kbd, null, '⌘'), ' ', h(B.Kbd, null, 'K'), ' command palette'), h('span', null, h(B.Kbd, null, '⌘'), ' ', h(B.Kbd, null, 'O'), ' quick open'), h('span', null, h(B.Kbd, null, '[['), ' link a note')));
+</script>
+</body>
+</html>

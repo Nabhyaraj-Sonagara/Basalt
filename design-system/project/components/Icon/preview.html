@@ -1,0 +1,12 @@
+<!-- @dsCard group="Brand" height=104 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Icon — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Basalt, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'bs-row', style: { gap: '20px', color: 'var(--ink-muted)' } }, ['note','folder','comb','wikilink','backlinks','search','tag','daily','task','new-note','settings','command','highlight','pin'].map(function (n) { return h('span', { key: n, title: n, style: { display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '6px', font: '500 11px/14px var(--font-sans)' } }, h(B.Icon, { name: n, size: 20 }), n); })));
+</script>
+</body>
+</html>

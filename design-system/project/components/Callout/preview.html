@@ -1,0 +1,12 @@
+<!-- @dsCard group="Notes" height=380 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Callout — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Basalt, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'bs-stack', style: { maxWidth: '620px', gap: '12px' } }, h(B.Callout, { kind: 'note' }, h('p', null, 'Columns are rarely perfect hexagons; five and seven sides show up too.')), h(B.Callout, { kind: 'tip', title: 'Link as you write' }, h('p', null, 'Type [[ and start a title. Basalt suggests notes from this folder first.')), h(B.Callout, { kind: 'info' }, h('p', null, 'This vault syncs end-to-end encrypted.')), h(B.Callout, { kind: 'warning', title: 'Sync conflict' }, h('p', null, 'Two versions of this note were edited offline. Pick one to keep.'))));
+</script>
+</body>
+</html>

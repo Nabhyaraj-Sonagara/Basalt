@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Basalt app icon</title>
+  <!-- pointy-top hexagon tile in stone, a regular hexagon 512 tall -->
+  <path fill="#1f1b16" d="M256 8 L470.8 132 V380 L256 504 L41.2 380 V132 Z"/>
+  <path fill="none" stroke="#3a352f" stroke-width="6" d="M256 16 L463.9 136 V376 L256 496 L48.1 376 V136 Z"/>
+  <g transform="translate(96 96) scale(5)">
+    <path fill="#6b6259" d="M12 14 L22 21 V43 L12 36 Z"/>
+    <path fill="#4a443d" d="M22 21 H42 V43 H22 Z"/>
+    <path fill="#36312b" d="M42 21 L52 14 V36 L42 43 Z"/>
+    <path fill="#6b6259" d="M12 38.5 L22 45.5 V57 L12 50 Z"/>
+    <path fill="#4a443d" d="M22 45.5 H42 V57 H22 Z"/>
+    <path fill="#36312b" d="M42 45.5 L52 38.5 V50 L42 57 Z"/>
+    <path fill="#f2b233" d="M12 14 L22 7 H42 L52 14 L42 21 H22 Z"/>
+    <path fill="#ffd84d" d="M20 14 L26 9.8 H38 L44 14 L38 18.2 H26 Z"/>
+    <path fill="#f2b233" d="M22 21 H42 V23 Q42 25 40 25 H36 V31 A2 2 0 0 1 32 31 V25 H24 Q22 25 22 23 Z"/>
+  </g>
+</svg>

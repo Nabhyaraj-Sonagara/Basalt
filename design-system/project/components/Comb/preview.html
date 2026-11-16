@@ -1,0 +1,12 @@
+<!-- @dsCard group="Views" height=300 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Comb — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Basalt, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { style: { padding: '16px', display: 'flex', justifyContent: 'center' } }, h(B.Comb, { cellSize: 36, cells: [{ q: 0, r: 0, label: 'Causeway', active: true }, { q: 1, r: -1, label: 'Jointing', weight: 3 }, { q: 1, r: 0, label: 'Staffa', weight: 2 }, { q: 0, r: 1, label: 'Lava', weight: 2 }, { q: -1, r: 1, label: 'Cooling', weight: 1 }, { q: -1, r: 0, label: 'Postpile', weight: 1 }, { q: 0, r: -1, label: 'Six sides', weight: 3 }, { q: 2, r: -1, label: 'Bees', weight: 1 }, { q: 2, r: -2, label: 'Wax', weight: 0 }, { q: -2, r: 1, label: 'Fingal', weight: 0 }, { q: 1, r: 1, label: 'Survey', weight: 1 }, { q: -1, r: 2, label: '', weight: 0 }, { q: 2, r: 0, label: '', weight: 0 }, { q: -2, r: 2, label: '', weight: 0 }] })));
+</script>
+</body>
+</html>

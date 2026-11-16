@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="currentColor">
+  <title>Basalt</title>
+  <path d="M12 14 L22 7 H42 L52 14 L42 21 H22 Z"/>
+  <path fill-opacity=".5" d="M12 16.5 L21 22.8 V43 L12 36.6 Z"/>
+  <path fill-opacity=".72" d="M23 23 H41 V43 H23 Z"/>
+  <path fill-opacity=".88" d="M43 22.8 L52 16.5 V36.6 L43 43 Z"/>
+  <path fill-opacity=".5" d="M12 39.1 L21 45.4 V56.4 L12 50 Z"/>
+  <path fill-opacity=".72" d="M23 45.5 H41 V57 H23 Z"/>
+  <path fill-opacity=".88" d="M43 45.4 L52 39.1 V50 L43 56.4 Z"/>
+</svg>

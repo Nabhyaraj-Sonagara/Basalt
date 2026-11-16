@@ -1,0 +1,71 @@
+<!-- @dsCard group="Showcase" height=600 width=1120 page subtitle="Sidebar, tabs, editor and the comb, composed" -->
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Workspace — preview</title>
+<style>
+  .ws { display: grid; grid-template-columns: 248px 1fr 272px; grid-template-rows: minmax(0, 1fr) auto; height: 600px; background: var(--surface); }
+  .ws-side { background: var(--surface-sunken); border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); overflow: hidden; }
+  .ws-vault { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-1) var(--space-2); }
+  .ws-vault b { font: 650 14px/20px var(--font-sans); }
+  .ws-vault small { display: block; font: 500 12px/16px var(--font-sans); color: var(--ink-muted); }
+  .ws-label { font: 600 12px/16px var(--font-sans); letter-spacing: .04em; text-transform: uppercase; color: var(--ink-muted); padding: var(--space-2) var(--space-2) var(--space-1); }
+  .ws-main { display: flex; flex-direction: column; min-width: 0; }
+  .ws-editor { flex: 1; overflow: hidden; padding: var(--space-12) var(--space-12) 0; max-width: 680px; }
+  .ws-editor h1 { font: 700 32px/38px var(--font-display); letter-spacing: -0.02em; margin: 0 0 var(--space-2); }
+  .ws-meta { display: flex; align-items: center; gap: var(--space-2); font: 500 12px/16px var(--font-sans); color: var(--ink-faint); margin-bottom: var(--space-6); }
+  .ws-editor p { font: 400 17px/28px var(--font-serif); margin: 0 0 var(--space-4); }
+  .ws-editor h2 { font: 650 22px/28px var(--font-display); letter-spacing: -0.01em; margin: var(--space-6) 0 var(--space-2); }
+  mark { background: var(--pollen); color: var(--on-honey); border-radius: var(--radius-xs); padding: 0 2px; }
+  .ws-right { border-left: 1px solid var(--line); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); overflow: hidden; }
+  .ws-back { font: 400 15px/24px var(--font-serif); color: var(--ink-muted); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--surface-raised); box-shadow: var(--shadow-sm); }
+  .ws-back b { display: block; font: 650 13px/20px var(--font-sans); color: var(--honey-text); }
+  .ws-status { display: flex; justify-content: flex-end; gap: var(--space-4); padding: var(--space-1) var(--space-4); border-top: 1px solid var(--line); background: var(--surface-sunken); font: 500 12px/18px var(--font-sans); color: var(--ink-muted); }
+  .ws-ok { color: var(--moss); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Basalt, h = React.createElement;
+  function Workspace() {
+    return h('div', { className: 'ws' },
+      h('nav', { className: 'ws-side' },
+        h('div', { className: 'ws-vault' }, h(B.HexAvatar, { name: 'Hive', size: 28 }), h('div', null, h('b', null, 'Hive'), h('small', null, '418 notes'))),
+        h(B.SearchField, { placeholder: 'Search' }),
+        h('div', { role: 'tree' },
+          h('div', { className: 'ws-label' }, 'Vault'),
+          h(B.TreeItem, { label: 'Today', icon: 'daily' }),
+          h(B.TreeItem, { kind: 'folder', label: 'Field notes', open: true, count: 4 }),
+          h(B.TreeItem, { label: 'Giant’s Causeway', depth: 1, active: true }),
+          h(B.TreeItem, { label: 'Staffa', depth: 1 }),
+          h(B.TreeItem, { label: 'Devils Postpile', depth: 1 }),
+          h(B.TreeItem, { kind: 'folder', label: 'Hive', count: 12 }),
+          h(B.TreeItem, { kind: 'folder', label: 'Reading list', count: 31 })),
+        h('div', null,
+          h('div', { className: 'ws-label' }, 'Tags'),
+          h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '0 8px' } },
+            h(B.Tag, { count: 14, onClick: function () {} }, 'geology'), h(B.Tag, { count: 9, onClick: function () {} }, 'travel'), h(B.Tag, { count: 3, onClick: function () {} }, 'bees')))),
+      h('main', { className: 'ws-main' },
+        h(B.Tabs, { active: 'a', tabs: [{ id: 'p', title: 'Index', pinned: true }, { id: 'a', title: 'Giant’s Causeway', dirty: true }, { id: 'b', title: 'Hexagonal jointing' }] }),
+        h('article', { className: 'ws-editor' },
+          h('h1', null, 'Giant’s Causeway'),
+          h('div', { className: 'ws-meta' }, 'Edited 4 min ago · 812 words ·', h(B.Tag, null, 'geology'), h(B.Tag, null, 'field-notes')),
+          h('p', null, 'Forty thousand columns, most with six sides. They formed as a lava flow ', h('mark', null, 'cooled slowly and evenly'), ', shrinking until it cracked — the same reason mud splits in a drought. See ', h(B.Wikilink, null, 'Hexagonal jointing'), '.'),
+          h(B.Task, { defaultChecked: true }, 'Photograph the columns at low tide'),
+          h(B.Task, null, 'Count sides on twenty columns'),
+          h('h2', null, 'Why six sides'),
+          h('p', null, 'Hexagons tile a plane with the least edge for the most area. Bees found the same answer; so did the lava. Compare with ', h(B.Wikilink, { unresolved: true }, 'Fingal’s Cave'), '.'))),
+      h('aside', { className: 'ws-right' },
+        h('div', { className: 'ws-label', style: { padding: 0 } }, 'Comb'),
+        h(B.Comb, { cellSize: 30, cells: [{ q: 0, r: 0, label: 'Causeway', active: true }, { q: 1, r: -1, label: 'Jointing', weight: 3 }, { q: 1, r: 0, label: 'Staffa', weight: 2 }, { q: 0, r: 1, label: 'Lava', weight: 2 }, { q: -1, r: 1, label: 'Cooling', weight: 1 }, { q: -1, r: 0, label: 'Postpile', weight: 1 }, { q: 0, r: -1, label: 'Bees', weight: 3 }] }),
+        h('div', { className: 'ws-label', style: { padding: 0 } }, 'Backlinks · 3'),
+        h('div', { className: 'ws-back' }, h('b', null, 'Hexagonal jointing'), '…the Causeway is the textbook case…'),
+        h('div', { className: 'ws-back' }, h('b', null, 'Trip: Antrim coast'), '…two days at the Causeway, then Ballintoy…')),
+      h('div', { className: 'ws-status', style: { gridColumn: '1 / -1' } }, h('span', { className: 'ws-ok' }, '✓ Synced'), h('span', null, '812 words'), h('span', null, 'Comb · 7 cells')));
+  }
+  ReactDOM.createRoot(document.getElementById('root')).render(h(Workspace));
+</script>
+</body>
+</html>

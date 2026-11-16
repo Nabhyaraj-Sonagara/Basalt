@@ -1,0 +1,101 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Basalt</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--surface); color: var(--ink); font-family: var(--font-sans); overflow: hidden; }
+  .cover { position: relative; width: 960px; height: 288px; overflow: hidden; }
+  .art { position: absolute; top: 0; left: 480px; width: 480px; height: 288px; overflow: hidden; }
+  .art svg { display: block; }
+  .honey { fill: var(--honey); }
+  .stone { fill: var(--stone); }
+  .stone-light { fill: var(--stone-light); }
+  .wax { fill: var(--wax); }
+  .soft { fill: var(--honey-soft); }
+  .pollen { fill: var(--pollen); }
+  .pat { fill: var(--wax); }
+  .pat2 { fill: var(--honey); }
+  .words { position: absolute; left: var(--space-8); bottom: var(--space-8); max-width: 440px; }
+  .name { margin: 0; font-family: var(--font-display); font-size: 112px; line-height: .92; font-weight: 750; letter-spacing: -0.035em; color: var(--ink); }
+  .tag { margin: var(--space-3) 0 0 6px; font-size: 14px; line-height: 20px; color: var(--ink-muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocks      nine flat-top hex cells (hex-flat), circumradius 56 on a 60 pitch: honey ×2 (the brand, centre of the cluster), stone + stone-light (the column), wax ×2, honey-soft ×2, one pollen bleeding off the bottom-right — ≈30% of 960×288
+  arrangement a comb cluster anchored top-right, bleeding off the top, right and bottom edges, like a broken-open honeycomb on a stone shelf
+  pattern     small hex cells (literal motif row: "the hexagon is Basalt's round"): wax cells with every fourth honey, on a 12px honeycomb pitch, thinning leftward toward the name — the comb still being built
+  scales      cell gaps space-1 (4px) and the small cells' 2px; pitch 60 = space-12 + space-3; the name sits space-8 from the bottom-left; no radii (hexagons only)
+-->
+<polygon class="honey" points="356.0,60.0 328.0,108.5 272.0,108.5 244.0,60.0 272.0,11.5 328.0,11.5"/>
+<polygon class="stone" points="446.0,112.0 418.0,160.5 362.0,160.5 334.0,112.0 362.0,63.5 418.0,63.5"/>
+<polygon class="honey" points="446.0,216.0 418.0,264.5 362.0,264.5 334.0,216.0 362.0,167.5 418.0,167.5"/>
+<polygon class="stone-light" points="356.0,164.0 328.0,212.5 272.0,212.5 244.0,164.0 272.0,115.5 328.0,115.5"/>
+<polygon class="wax" points="536.0,164.0 508.0,212.5 452.0,212.5 424.0,164.0 452.0,115.5 508.0,115.5"/>
+<polygon class="soft" points="536.0,60.0 508.0,108.5 452.0,108.5 424.0,60.0 452.0,11.5 508.0,11.5"/>
+<polygon class="soft" points="356.0,268.0 328.0,316.5 272.0,316.5 244.0,268.0 272.0,219.5 328.0,219.5"/>
+<polygon class="wax" points="266.0,112.0 238.0,160.5 182.0,160.5 154.0,112.0 182.0,63.5 238.0,63.5"/>
+<polygon class="pollen" points="536.0,268.0 508.0,316.5 452.0,316.5 424.0,268.0 452.0,219.5 508.0,219.5"/>
+<polygon class="pat2" points="142.0,0.0 137.0,8.7 127.0,8.7 122.0,0.0 127.0,-8.7 137.0,-8.7"/>
+<polygon class="pat" points="142.0,20.8 137.0,29.4 127.0,29.4 122.0,20.8 127.0,12.1 137.0,12.1"/>
+<polygon class="pat" points="142.0,62.4 137.0,71.0 127.0,71.0 122.0,62.4 127.0,53.7 137.0,53.7"/>
+<polygon class="pat" points="142.0,83.1 137.0,91.8 127.0,91.8 122.0,83.1 127.0,74.5 137.0,74.5"/>
+<polygon class="pat2" points="142.0,103.9 137.0,112.6 127.0,112.6 122.0,103.9 127.0,95.3 137.0,95.3"/>
+<polygon class="pat" points="142.0,124.7 137.0,133.4 127.0,133.4 122.0,124.7 127.0,116.0 137.0,116.0"/>
+<polygon class="pat" points="142.0,145.5 137.0,154.2 127.0,154.2 122.0,145.5 127.0,136.8 137.0,136.8"/>
+<polygon class="pat" points="142.0,166.3 137.0,174.9 127.0,174.9 122.0,166.3 127.0,157.6 137.0,157.6"/>
+<polygon class="pat2" points="142.0,187.1 137.0,195.7 127.0,195.7 122.0,187.1 127.0,178.4 137.0,178.4"/>
+<polygon class="pat" points="142.0,207.8 137.0,216.5 127.0,216.5 122.0,207.8 127.0,199.2 137.0,199.2"/>
+<polygon class="pat" points="142.0,228.6 137.0,237.3 127.0,237.3 122.0,228.6 127.0,220.0 137.0,220.0"/>
+<polygon class="pat" points="142.0,249.4 137.0,258.1 127.0,258.1 122.0,249.4 127.0,240.8 137.0,240.8"/>
+<polygon class="pat2" points="142.0,270.2 137.0,278.9 127.0,278.9 122.0,270.2 127.0,261.5 137.0,261.5"/>
+<polygon class="pat" points="124.0,10.4 119.0,19.1 109.0,19.1 104.0,10.4 109.0,1.7 119.0,1.7"/>
+<polygon class="pat" points="124.0,31.2 119.0,39.8 109.0,39.8 104.0,31.2 109.0,22.5 119.0,22.5"/>
+<polygon class="pat" points="124.0,93.5 119.0,102.2 109.0,102.2 104.0,93.5 109.0,84.9 119.0,84.9"/>
+<polygon class="pat2" points="124.0,114.3 119.0,123.0 109.0,123.0 104.0,114.3 109.0,105.7 119.0,105.7"/>
+<polygon class="pat" points="124.0,135.1 119.0,143.8 109.0,143.8 104.0,135.1 109.0,126.4 119.0,126.4"/>
+<polygon class="pat" points="124.0,155.9 119.0,164.5 109.0,164.5 104.0,155.9 109.0,147.2 119.0,147.2"/>
+<polygon class="pat" points="124.0,176.7 119.0,185.3 109.0,185.3 104.0,176.7 109.0,168.0 119.0,168.0"/>
+<polygon class="pat2" points="124.0,197.5 119.0,206.1 109.0,206.1 104.0,197.5 109.0,188.8 119.0,188.8"/>
+<polygon class="pat" points="124.0,218.2 119.0,226.9 109.0,226.9 104.0,218.2 109.0,209.6 119.0,209.6"/>
+<polygon class="pat" points="124.0,239.0 119.0,247.7 109.0,247.7 104.0,239.0 109.0,230.4 119.0,230.4"/>
+<polygon class="pat" points="124.0,259.8 119.0,268.5 109.0,268.5 104.0,259.8 109.0,251.1 119.0,251.1"/>
+<polygon class="pat2" points="124.0,280.6 119.0,289.3 109.0,289.3 104.0,280.6 109.0,271.9 119.0,271.9"/>
+<polygon class="pat" points="106.0,0.0 101.0,8.7 91.0,8.7 86.0,0.0 91.0,-8.7 101.0,-8.7"/>
+<polygon class="pat" points="106.0,41.6 101.0,50.2 91.0,50.2 86.0,41.6 91.0,32.9 101.0,32.9"/>
+<polygon class="pat" points="106.0,83.1 101.0,91.8 91.0,91.8 86.0,83.1 91.0,74.5 101.0,74.5"/>
+<polygon class="pat2" points="106.0,124.7 101.0,133.4 91.0,133.4 86.0,124.7 91.0,116.0 101.0,116.0"/>
+<polygon class="pat" points="106.0,145.5 101.0,154.2 91.0,154.2 86.0,145.5 91.0,136.8 101.0,136.8"/>
+<polygon class="pat" points="106.0,249.4 101.0,258.1 91.0,258.1 86.0,249.4 91.0,240.8 101.0,240.8"/>
+<polygon class="pat" points="106.0,270.2 101.0,278.9 91.0,278.9 86.0,270.2 91.0,261.5 101.0,261.5"/>
+<polygon class="pat2" points="88.0,10.4 83.0,19.1 73.0,19.1 68.0,10.4 73.0,1.7 83.0,1.7"/>
+<polygon class="pat" points="88.0,31.2 83.0,39.8 73.0,39.8 68.0,31.2 73.0,22.5 83.0,22.5"/>
+<polygon class="pat" points="88.0,114.3 83.0,123.0 73.0,123.0 68.0,114.3 73.0,105.7 83.0,105.7"/>
+<polygon class="pat" points="88.0,176.7 83.0,185.3 73.0,185.3 68.0,176.7 73.0,168.0 83.0,168.0"/>
+<polygon class="pat2" points="88.0,197.5 83.0,206.1 73.0,206.1 68.0,197.5 73.0,188.8 83.0,188.8"/>
+<polygon class="pat" points="88.0,280.6 83.0,289.3 73.0,289.3 68.0,280.6 73.0,271.9 83.0,271.9"/>
+<polygon class="pat" points="70.0,0.0 65.0,8.7 55.0,8.7 50.0,0.0 55.0,-8.7 65.0,-8.7"/>
+<polygon class="pat" points="70.0,83.1 65.0,91.8 55.0,91.8 50.0,83.1 55.0,74.5 65.0,74.5"/>
+<polygon class="pat2" points="70.0,166.3 65.0,174.9 55.0,174.9 50.0,166.3 55.0,157.6 65.0,157.6"/>
+<polygon class="pat" points="70.0,187.1 65.0,195.7 55.0,195.7 50.0,187.1 55.0,178.4 65.0,178.4"/>
+<polygon class="pat" points="70.0,207.8 65.0,216.5 55.0,216.5 50.0,207.8 55.0,199.2 65.0,199.2"/>
+<polygon class="pat" points="70.0,228.6 65.0,237.3 55.0,237.3 50.0,228.6 55.0,220.0 65.0,220.0"/>
+<polygon class="pat2" points="70.0,270.2 65.0,278.9 55.0,278.9 50.0,270.2 55.0,261.5 65.0,261.5"/>
+<polygon class="pat" points="52.0,93.5 47.0,102.2 37.0,102.2 32.0,93.5 37.0,84.9 47.0,84.9"/>
+<polygon class="pat" points="52.0,135.1 47.0,143.8 37.0,143.8 32.0,135.1 37.0,126.4 47.0,126.4"/>
+<polygon class="pat" points="34.0,228.6 29.0,237.3 19.0,237.3 14.0,228.6 19.0,220.0 29.0,220.0"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">Basalt</h1>
+<p class="tag">Cooled slowly. Built to stack.</p>
+</div>
+</div>
+</body>
+</html>

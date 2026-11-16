@@ -1,0 +1,12 @@
+<!-- @dsCard group="Actions" height=112 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Button — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Basalt, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'bs-stack' }, h('div', { className: 'bs-row', style: { padding: 0 } }, h(B.Button, { variant: 'primary', icon: 'new-note' }, 'New note'), h(B.Button, { variant: 'secondary' }, 'Open vault'), h(B.Button, { variant: 'quiet', icon: 'comb' }, 'Comb view'), h(B.Button, { variant: 'danger' }, 'Delete note'), h(B.Button, { variant: 'quiet', icon: 'settings', 'aria-label': 'Settings' })), h('div', { className: 'bs-row', style: { padding: 0 } }, h(B.Button, { variant: 'primary', size: 'sm' }, 'Insert'), h(B.Button, { variant: 'secondary', size: 'sm', icon: 'pin' }, 'Pin'), h(B.Button, { variant: 'quiet', size: 'sm' }, 'Cancel'), h(B.Button, { variant: 'primary', disabled: true }, 'Syncing…'))));
+</script>
+</body>
+</html>

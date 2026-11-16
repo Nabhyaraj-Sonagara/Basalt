@@ -1,0 +1,12 @@
+<!-- @dsCard group="Notes" height=72 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Tag — preview</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Basalt, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { className: 'bs-row' }, h(B.Tag, null, 'geology'), h(B.Tag, { count: 14, onClick: function () {} }, 'field-notes'), h(B.Tag, { active: true, count: 3, onClick: function () {} }, 'beekeeping'), h(B.Tag, { tone: 'stone' }, 'archive')));
+</script>
+</body>
+</html>
