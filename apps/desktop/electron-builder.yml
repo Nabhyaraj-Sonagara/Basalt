@@ -1,0 +1,32 @@
+appId: md.basalt.app
+productName: Basalt
+directories:
+  output: release
+files:
+  - out/**
+  - package.json
+  - "!node_modules/**"
+extraResources:
+  - from: ../../fixtures/sample-hive
+    to: sample-hive
+  - from: ../../packages/cli/dist/basalt.mjs
+    to: cli/basalt.mjs
+asar: true
+executableName: basalt
+linux:
+  target: [dir, AppImage]
+  category: Office
+  icon: ../../design-system/project/assets/Logos/basalt-app-icon.svg
+mac:
+  category: public.app-category.productivity
+win:
+  target: nsis
+electronVersion: 45.3.3
+# Lock down the Electron binary (flagged by REA's release-exposure audit).
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
+  enableEmbeddedAsarIntegrityValidation: true
+  enableCookieEncryption: true

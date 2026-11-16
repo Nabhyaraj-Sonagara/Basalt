@@ -1,0 +1,11 @@
+{
+	"nodes": [
+		{ "id": "a1", "type": "file", "file": "Welcome.md", "x": 0, "y": 0, "width": 320, "height": 220 },
+		{ "id": "a2", "type": "text", "text": "Plain **Markdown** on a card", "x": 400, "y": 0, "width": 260, "height": 120, "color": "2" },
+		{ "id": "a3", "type": "file", "file": "Projects/Basalt launch.md", "x": 400, "y": 180, "width": 320, "height": 220 }
+	],
+	"edges": [
+		{ "id": "e1", "fromNode": "a1", "fromSide": "right", "toNode": "a2", "toSide": "left", "toEnd": "arrow" },
+		{ "id": "e2", "fromNode": "a2", "fromSide": "bottom", "toNode": "a3", "toSide": "top", "label": "leads to" }
+	]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "basalt",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Basalt: an AI-friendly, local-first Markdown notes app.",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "tokens": "node scripts/build-tokens.mjs",
+    "dev": "npm run tokens && npm run dev -w @basalt/desktop",
+    "build": "npm run tokens && npm run build -w @basalt/cli && npm run build -w @basalt/desktop",
+    "test": "vitest run",
+    "test:e2e": "npm run build -w @basalt/desktop && node apps/desktop/e2e/run.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "basalt": "node packages/cli/dist/basalt.mjs",
+    "postinstall": "node scripts/build-tokens.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

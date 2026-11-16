@@ -1,0 +1,13 @@
+{
+  "name": "@basalt/ai",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types-only": "./src/types-only.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@basalt/core": "0.1.0"
+  }
+}
