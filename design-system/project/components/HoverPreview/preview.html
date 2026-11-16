@@ -1,0 +1,32 @@
+<!-- @dsCard group="Notes" height=380 subtitle="Shown on hovering a [[link]]; resolved and not-yet-written" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>HoverPreview — preview</title>
+<style>
+  .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); padding: var(--space-6); align-items: start; }
+  .para { margin: 0 0 var(--space-2); font: 400 17px/28px var(--font-serif); }
+  .anchor { position: relative; }
+  .float { margin-top: var(--space-1); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Basalt, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    h('div', { className: 'wrap' },
+      h('div', null,
+        h('p', { className: 'para' }, 'See ', h(B.Wikilink, null, 'Hexagonal jointing'), ' for why.'),
+        h('div', { className: 'float' },
+          h(B.HoverPreview, {
+            title: 'Hexagonal jointing', path: 'Field notes', heading: 'Why six sides',
+            tags: ['geology'], meta: 'Edited yesterday', backlinks: 7, onOpen: function () {}
+          },
+            h('p', null, 'As a lava flow cools it contracts, and cracks open to relieve the strain. Three cracks meeting at 120° spend the least energy, so the cracks settle into hexagons — the same answer a bee reaches with wax.')))),
+      h('div', null,
+        h('p', { className: 'para' }, 'Compare with ', h(B.Wikilink, { unresolved: true }, 'Fingal’s Cave'), '.'),
+        h('div', { className: 'float' },
+          h(B.HoverPreview, { unresolved: true, title: 'Fingal’s Cave', path: 'Field notes', backlinks: 3, onCreate: function () {} })))));
+</script>
+</body>
+</html>

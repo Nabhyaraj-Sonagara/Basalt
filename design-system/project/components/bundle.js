@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"Basalt","components":[{"name":"Logo"},{"name":"Icon"},{"name":"Button"},{"name":"Kbd"},{"name":"Tag"},{"name":"Task"},{"name":"Wikilink"},{"name":"Callout"},{"name":"HexAvatar"},{"name":"SearchField"},{"name":"TreeItem"},{"name":"Tabs"},{"name":"CommandPalette"},{"name":"Comb"}]} */
+/* @ds-bundle: {"format":4,"namespace":"Basalt","components":[{"name":"Logo"},{"name":"Icon"},{"name":"Button"},{"name":"Kbd"},{"name":"Tag"},{"name":"Task"},{"name":"Wikilink"},{"name":"Callout"},{"name":"HexAvatar"},{"name":"SearchField"},{"name":"TreeItem"},{"name":"Tabs"},{"name":"CommandPalette"},{"name":"Comb"},{"name":"EmptyState"},{"name":"HoverPreview"}]} */
 (function () {
   var React = window.React;
   var h = React.createElement;
@@ -160,7 +160,7 @@
     var other = rest(props, ['shortcut', 'className', 'placeholder']);
     return h('label', { className: cx('bs-search', props.className) },
       h(Icon, { name: 'search', size: 16 }),
-      h('input', Object.assign({ type: 'search', placeholder: props.placeholder || 'Search the vault', 'aria-label': props.placeholder || 'Search the vault' }, other)),
+      h('input', Object.assign({ type: 'search', placeholder: props.placeholder || 'Search this hive', 'aria-label': props.placeholder || 'Search this hive' }, other)),
       props.shortcut === null ? null : h(Kbd, null, props.shortcut || '⌘K'));
   }
 
@@ -253,6 +253,73 @@
       }));
   }
 
-  var api = { Logo: Logo, Icon: Icon, Button: Button, Kbd: Kbd, Tag: Tag, Task: Task, Wikilink: Wikilink, Callout: Callout, HexAvatar: HexAvatar, SearchField: SearchField, TreeItem: TreeItem, Tabs: Tabs, CommandPalette: CommandPalette, Comb: Comb };
+  /* ---------- EmptyState ---------- */
+  var CAUSEWAY =
+    '<path fill="#5a5249" d="M8 34 L18 41 V69 L8 62 Z"/><path fill="#3a352f" d="M18 41 H38 V69 H18 Z"/><path fill="#2a2622" d="M38 41 L48 34 V62 L38 69 Z"/><path fill="#4a443d" d="M8 34 L18 27 H38 L48 34 L38 41 H18 Z"/>' +
+    '<path fill="#5a5249" d="M72 44 L82 51 V73 L72 66 Z"/><path fill="#3a352f" d="M82 51 H102 V73 H82 Z"/><path fill="#2a2622" d="M102 51 L112 44 V66 L102 73 Z"/><path fill="#4a443d" d="M72 44 L82 37 H102 L112 44 L102 51 H82 Z"/>' +
+    '<path fill="#5a5249" d="M40 18 L50 25 V49 L40 42 Z"/><path fill="#3a352f" d="M50 25 H70 V49 H50 Z"/><path fill="#2a2622" d="M70 25 L80 18 V42 L70 49 Z"/>' +
+    '<path fill="#5a5249" d="M40 44.5 L50 51.5 V75 L40 68 Z"/><path fill="#3a352f" d="M50 51.5 H70 V75 H50 Z"/><path fill="#2a2622" d="M70 51.5 L80 44.5 V68 L70 75 Z"/>' +
+    '<path fill="#e8a317" d="M40 18 L50 11 H70 L80 18 L70 25 H50 Z"/><path fill="#f6c94e" d="M48 18 L54 13.8 H66 L72 18 L66 22.2 H54 Z"/>' +
+    '<path fill="#e8a317" d="M50 25 H70 V27 Q70 29 68 29 H64 V35 A2 2 0 0 1 60 35 V29 H52 Q50 29 50 27 Z"/>';
+
+  // Deterministic honeycomb: an oval clearing for the content, cells growing denser toward the edges. No gradients, just fewer cells.
+  function combPattern(w, ht, r) {
+    var cells = [], dx = 1.5 * r, dy = Math.sqrt(3) * r, cxp = w / 2, cyp = ht / 2;
+    for (var c = -1; c * dx < w + r; c++) {
+      for (var row = -1; row * dy < ht + r; row++) {
+        var x = c * dx, y = row * dy + (c % 2 ? dy / 2 : 0);
+        var ex = (x - cxp) / (w * 0.33), ey = (y - cyp) / (ht * 0.42);
+        var e = Math.sqrt(ex * ex + ey * ey);
+        var n = Math.abs(Math.sin(c * 12.9898 + row * 78.233) * 43758.5453) % 1;
+        if (e < 1 || n > (e - 1) * 2.4) continue;
+        cells.push(h('polygon', { key: c + ':' + row, className: n < 0.1 ? 'bs-empty-cell-accent' : 'bs-empty-cell', points: hexPoints(x, y, r - 1.5) }));
+      }
+    }
+    return cells;
+  }
+  function EmptyState(props) {
+    var compact = !!props.compact;
+    var art = props.illustration === 'causeway'
+      ? h('svg', { className: 'bs-empty-art', width: 120, height: 80, viewBox: '0 0 120 80', 'aria-hidden': true, dangerouslySetInnerHTML: { __html: CAUSEWAY } })
+      : h('span', { className: 'bs-empty-well' }, h(Icon, { name: props.icon || 'note', size: compact ? 18 : 24 }));
+    var W = 640, H = 320;
+    return h('section', { className: cx('bs-empty', compact && 'bs-empty-compact', props.className) },
+      !compact && props.pattern !== false
+        ? h('svg', { className: 'bs-empty-pattern', viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid slice', 'aria-hidden': true }, combPattern(W, H, 22))
+        : null,
+      h('div', { className: 'bs-empty-body' },
+        art,
+        h('h2', { className: 'bs-empty-title' }, props.title),
+        props.children ? h('div', { className: 'bs-empty-text' }, props.children) : null,
+        props.actions ? h('div', { className: 'bs-empty-actions' }, props.actions) : null));
+  }
+
+  /* ---------- HoverPreview ---------- */
+  function HoverPreview(props) {
+    var unresolved = !!props.unresolved;
+    var lines = props.maxLines || 6;
+    return h('div', { className: cx('bs-hover', unresolved && 'bs-hover-unresolved', props.className), role: 'tooltip', style: props.style },
+      h('div', { className: 'bs-hover-head' },
+        h('span', { className: 'bs-hover-well' }, h(Icon, { name: unresolved ? 'new-note' : 'note', size: 14 })),
+        h('div', { className: 'bs-hover-titles' },
+          h('div', { className: 'bs-hover-title' }, props.title),
+          props.path ? h('div', { className: 'bs-hover-path' }, props.path) : null),
+        !unresolved && props.onOpen ? h(Button, { variant: 'quiet', size: 'sm', icon: 'external', 'aria-label': 'Open in new tab', onClick: props.onOpen }) : null),
+      unresolved
+        ? h('div', { className: 'bs-hover-body' },
+            h('p', { className: 'bs-hover-empty' }, 'Not written yet. ', props.backlinks ? props.backlinks + (props.backlinks === 1 ? ' note links' : ' notes link') + ' here already.' : ''),
+            h(Button, { variant: 'primary', size: 'sm', icon: 'new-note', onClick: props.onCreate }, 'Create note'))
+        : h('div', { className: 'bs-hover-body' },
+            props.heading ? h('div', { className: 'bs-hover-heading' }, props.heading) : null,
+            h('div', { className: 'bs-hover-excerpt', style: { WebkitLineClamp: lines } }, props.children)),
+      !unresolved && (props.tags || props.meta || props.backlinks != null)
+        ? h('div', { className: 'bs-hover-foot' },
+            (props.tags || []).map(function (t) { return h(Tag, { key: t }, t); }),
+            h('span', { className: 'bs-hover-meta' },
+              [props.meta, props.backlinks != null ? props.backlinks + ' backlinks' : null].filter(Boolean).join(' · ')))
+        : null);
+  }
+
+  var api = { Logo: Logo, Icon: Icon, Button: Button, Kbd: Kbd, Tag: Tag, Task: Task, Wikilink: Wikilink, Callout: Callout, HexAvatar: HexAvatar, SearchField: SearchField, TreeItem: TreeItem, Tabs: Tabs, CommandPalette: CommandPalette, Comb: Comb, EmptyState: EmptyState, HoverPreview: HoverPreview };
   window.Basalt = Object.assign(window.Basalt || {}, api);
 })();

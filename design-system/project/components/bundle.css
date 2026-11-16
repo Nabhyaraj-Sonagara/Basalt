@@ -137,3 +137,38 @@ button.bs-tag-hit:hover .bs-tag:not(.bs-tag-active), a.bs-tag-hit:hover .bs-tag:
 .bs-comb-active text { fill: var(--stone-ink); }
 .bs-comb-cell { cursor: pointer; }
 .bs-comb-cell:hover polygon { filter: brightness(1.05); }
+
+/* EmptyState: a honeycomb that thins out from the centre (no gradient), content on top */
+.bs-empty { position: relative; overflow: hidden; display: grid; place-items: center; min-height: 320px; padding: var(--space-12) var(--space-6); background: var(--surface); text-align: center; }
+.bs-empty-pattern { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.bs-empty-cell { fill: var(--honey-soft); }
+.bs-empty-cell-accent { fill: var(--wax); }
+.bs-empty-body { position: relative; display: flex; flex-direction: column; align-items: center; max-width: 400px; }
+.bs-empty-well { display: inline-grid; place-items: center; width: 56px; height: 65px; margin-bottom: var(--space-4); clip-path: var(--hex-pointy); background: var(--honey-soft); color: var(--honey-text); }
+.bs-empty-art { display: block; margin-bottom: var(--space-4); }
+.bs-empty-title { margin: 0; font: 650 22px/28px var(--font-display); letter-spacing: -0.01em; color: var(--ink); }
+.bs-empty-text { margin-top: var(--space-2); font: 400 15px/24px var(--font-serif); color: var(--ink-muted); }
+.bs-empty-text > p { margin: 0; }
+.bs-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-6); }
+.bs-empty-compact { min-height: 0; padding: var(--space-6) var(--space-4); background: transparent; }
+.bs-empty-compact .bs-empty-well { width: 36px; height: 42px; margin-bottom: var(--space-3); background: var(--surface-hover); color: var(--ink-muted); }
+.bs-empty-compact .bs-empty-title { font: 650 14px/20px var(--font-sans); letter-spacing: 0; }
+.bs-empty-compact .bs-empty-text { margin-top: var(--space-1); font: 500 13px/18px var(--font-sans); }
+.bs-empty-compact .bs-empty-actions { margin-top: var(--space-3); }
+
+/* HoverPreview: a floating, matte card for [[link]] hovers */
+.bs-hover { width: 360px; max-width: 100%; background: var(--surface-raised); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); color: var(--ink); overflow: hidden; }
+.bs-hover-head { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-2) var(--space-2) var(--space-4); }
+.bs-hover-well { flex: none; display: inline-grid; place-items: center; width: 24px; height: 28px; clip-path: var(--hex-pointy); background: var(--honey-soft); color: var(--honey-text); }
+.bs-hover-titles { flex: 1; min-width: 0; }
+.bs-hover-title { font: 650 15px/20px var(--font-sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bs-hover-path { font: 500 12px/16px var(--font-sans); color: var(--ink-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bs-hover-body { padding: 0 var(--space-4) var(--space-3); }
+.bs-hover-heading { font: 650 13px/18px var(--font-sans); color: var(--honey-text); margin-bottom: var(--space-1); }
+.bs-hover-excerpt { font: 400 15px/24px var(--font-serif); display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.bs-hover-excerpt > p { margin: 0 0 var(--space-2); }
+.bs-hover-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: var(--space-2) var(--space-4); border-top: 1px solid var(--line); background: var(--surface-sunken); }
+.bs-hover-meta { margin-left: auto; font: 500 12px/16px var(--font-sans); color: var(--ink-muted); }
+.bs-hover-unresolved .bs-hover-well { background: var(--surface-hover); color: var(--ink-muted); }
+.bs-hover-unresolved .bs-hover-title { color: var(--ink-muted); }
+.bs-hover-empty { margin: 0 0 var(--space-3); font: 400 15px/24px var(--font-serif); color: var(--ink-muted); }

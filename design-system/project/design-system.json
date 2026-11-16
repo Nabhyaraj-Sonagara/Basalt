@@ -1,67 +1,94 @@
 {
   "v": 3,
-  "layout": "files",
-  "createdOnFiles": {
-    "v": 1,
-    "at": "2026-11-16T08:22:14Z"
-  },
-  "title": "Basalt",
-  "namespace": "Basalt",
-  "libraries": [
-    {
-      "name": "react",
-      "version": "18.3.1"
-    },
-    {
-      "name": "react-dom",
-      "version": "18.3.1"
-    }
-  ],
-  "sections": {},
-  "groups": [
-    "Logos",
-    "Icons"
-  ],
   "assetGroups": {
-    "Logos": {
-      "name": "Logos",
-      "tile": "l",
-      "order": [
-        "basalt-mark.svg",
-        "basalt-mark-mono.svg",
-        "basalt-app-icon.svg",
-        "basalt-causeway.svg"
-      ],
+    "Icons": {
       "files": {
-        "basalt-mark.svg": {
-          "name": "basalt-mark.svg",
-          "blob": "014e4092eba210a2775fdd0e103e8c21",
-          "size": 850,
+        "backlinks.svg": {
+          "blob": "aaf4c97eba0990280038e14e9a06593a",
+          "name": "backlinks.svg",
+          "size": 282,
           "type": "image/svg+xml"
         },
-        "basalt-mark-mono.svg": {
-          "name": "basalt-mark-mono.svg",
-          "blob": "0398f2b04cc2ec5286786229c7104a00",
-          "size": 558,
+        "comb.svg": {
+          "blob": "9cf90494ad38fb598459a42c49d06c82",
+          "name": "comb.svg",
+          "size": 370,
           "type": "image/svg+xml"
         },
-        "basalt-app-icon.svg": {
-          "name": "basalt-app-icon.svg",
-          "blob": "9f7ce1b0bbd722d3c0f84048c161413c",
-          "size": 1032,
+        "command.svg": {
+          "blob": "47135aca36dba96cc1c544849e480611",
+          "name": "command.svg",
+          "size": 290,
           "type": "image/svg+xml"
         },
-        "basalt-causeway.svg": {
-          "name": "basalt-causeway.svg",
-          "blob": "fbef479a6c8945484d1e3758ea33e89b",
-          "size": 1412,
+        "daily.svg": {
+          "blob": "b20ef37563a103041a19a643595a7ed8",
+          "name": "daily.svg",
+          "size": 325,
+          "type": "image/svg+xml"
+        },
+        "folder.svg": {
+          "blob": "18cd8f67a94e406af0b9aa423e529624",
+          "name": "folder.svg",
+          "size": 310,
+          "type": "image/svg+xml"
+        },
+        "highlight.svg": {
+          "blob": "30a56f189316c22dacb26d4fba5943c2",
+          "name": "highlight.svg",
+          "size": 248,
+          "type": "image/svg+xml"
+        },
+        "new-note.svg": {
+          "blob": "556d0d7ab106688892752d71815db8fc",
+          "name": "new-note.svg",
+          "size": 279,
+          "type": "image/svg+xml"
+        },
+        "note.svg": {
+          "blob": "80a804eb78059a98428d51fe6eddd829",
+          "name": "note.svg",
+          "size": 266,
+          "type": "image/svg+xml"
+        },
+        "pin.svg": {
+          "blob": "cf9a4512711e7ced276a666d96d45b6b",
+          "name": "pin.svg",
+          "size": 251,
+          "type": "image/svg+xml"
+        },
+        "search.svg": {
+          "blob": "056fce3b9949c4c733dc6ffdaa4e6f03",
+          "name": "search.svg",
+          "size": 279,
+          "type": "image/svg+xml"
+        },
+        "settings.svg": {
+          "blob": "c36c80a783b43ad08f22b57736dc4ffe",
+          "name": "settings.svg",
+          "size": 268,
+          "type": "image/svg+xml"
+        },
+        "tag.svg": {
+          "blob": "48ed4f7e84c08c11cac739966df251e6",
+          "name": "tag.svg",
+          "size": 253,
+          "type": "image/svg+xml"
+        },
+        "task.svg": {
+          "blob": "fbfc0ec1def12f29c962f53db14c2bb0",
+          "name": "task.svg",
+          "size": 286,
+          "type": "image/svg+xml"
+        },
+        "wikilink.svg": {
+          "blob": "37526bada0e32c06241a57748cde3117",
+          "name": "wikilink.svg",
+          "size": 260,
           "type": "image/svg+xml"
         }
-      }
-    },
-    "Icons": {
+      },
       "name": "Icons",
-      "tile": "xs",
       "order": [
         "note.svg",
         "folder.svg",
@@ -78,103 +105,78 @@
         "highlight.svg",
         "pin.svg"
       ],
+      "tile": "xs"
+    },
+    "Logos": {
       "files": {
-        "note.svg": {
-          "name": "note.svg",
-          "blob": "80a804eb78059a98428d51fe6eddd829",
-          "size": 266,
+        "basalt-app-icon.svg": {
+          "blob": "9f7ce1b0bbd722d3c0f84048c161413c",
+          "name": "basalt-app-icon.svg",
+          "size": 1032,
           "type": "image/svg+xml"
         },
-        "folder.svg": {
-          "name": "folder.svg",
-          "blob": "18cd8f67a94e406af0b9aa423e529624",
-          "size": 310,
+        "basalt-causeway.svg": {
+          "blob": "fbef479a6c8945484d1e3758ea33e89b",
+          "name": "basalt-causeway.svg",
+          "size": 1412,
           "type": "image/svg+xml"
         },
-        "comb.svg": {
-          "name": "comb.svg",
-          "blob": "9cf90494ad38fb598459a42c49d06c82",
-          "size": 370,
+        "basalt-mark-mono.svg": {
+          "blob": "0398f2b04cc2ec5286786229c7104a00",
+          "name": "basalt-mark-mono.svg",
+          "size": 558,
           "type": "image/svg+xml"
         },
-        "wikilink.svg": {
-          "name": "wikilink.svg",
-          "blob": "37526bada0e32c06241a57748cde3117",
-          "size": 260,
-          "type": "image/svg+xml"
-        },
-        "backlinks.svg": {
-          "name": "backlinks.svg",
-          "blob": "aaf4c97eba0990280038e14e9a06593a",
-          "size": 282,
-          "type": "image/svg+xml"
-        },
-        "search.svg": {
-          "name": "search.svg",
-          "blob": "056fce3b9949c4c733dc6ffdaa4e6f03",
-          "size": 279,
-          "type": "image/svg+xml"
-        },
-        "tag.svg": {
-          "name": "tag.svg",
-          "blob": "48ed4f7e84c08c11cac739966df251e6",
-          "size": 253,
-          "type": "image/svg+xml"
-        },
-        "daily.svg": {
-          "name": "daily.svg",
-          "blob": "b20ef37563a103041a19a643595a7ed8",
-          "size": 325,
-          "type": "image/svg+xml"
-        },
-        "task.svg": {
-          "name": "task.svg",
-          "blob": "fbfc0ec1def12f29c962f53db14c2bb0",
-          "size": 286,
-          "type": "image/svg+xml"
-        },
-        "new-note.svg": {
-          "name": "new-note.svg",
-          "blob": "556d0d7ab106688892752d71815db8fc",
-          "size": 279,
-          "type": "image/svg+xml"
-        },
-        "settings.svg": {
-          "name": "settings.svg",
-          "blob": "c36c80a783b43ad08f22b57736dc4ffe",
-          "size": 268,
-          "type": "image/svg+xml"
-        },
-        "command.svg": {
-          "name": "command.svg",
-          "blob": "47135aca36dba96cc1c544849e480611",
-          "size": 290,
-          "type": "image/svg+xml"
-        },
-        "highlight.svg": {
-          "name": "highlight.svg",
-          "blob": "30a56f189316c22dacb26d4fba5943c2",
-          "size": 248,
-          "type": "image/svg+xml"
-        },
-        "pin.svg": {
-          "name": "pin.svg",
-          "blob": "cf9a4512711e7ced276a666d96d45b6b",
-          "size": 251,
+        "basalt-mark.svg": {
+          "blob": "014e4092eba210a2775fdd0e103e8c21",
+          "name": "basalt-mark.svg",
+          "size": 850,
           "type": "image/svg+xml"
         }
-      }
+      },
+      "name": "Logos",
+      "order": [
+        "basalt-mark.svg",
+        "basalt-mark-mono.svg",
+        "basalt-app-icon.svg",
+        "basalt-causeway.svg"
+      ],
+      "tile": "l"
     }
   },
   "blobs": {},
+  "createdOnFiles": {
+    "at": "2026-11-16T08:22:14Z",
+    "v": 1
+  },
   "docs": {
     "readme": "project/README.md",
     "sections": []
   },
+  "groups": [
+    "Logos",
+    "Icons"
+  ],
   "lastChange": {
     "by": "Claude",
-    "at": "2026-11-16T08:22:14Z",
+    "at": "2026-11-16T08:31:38Z",
     "via": "Claude Code",
-    "note": "First version: honey-on-stone tokens, hexagon shapes, column logo, 14 components."
-  }
+    "note": "Vaults renamed to hives; added EmptyState and HoverPreview."
+  },
+  "layout": "files",
+  "libraries": [
+    {
+      "global": "React",
+      "name": "react",
+      "version": "18.3.1"
+    },
+    {
+      "global": "ReactDOM",
+      "name": "react-dom",
+      "version": "18.3.1"
+    }
+  ],
+  "namespace": "Basalt",
+  "sections": {},
+  "title": "Basalt"
 }

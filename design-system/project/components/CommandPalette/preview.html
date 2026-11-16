@@ -6,7 +6,7 @@
 <div id="root"></div>
 <script>
   var B = window.Basalt, h = React.createElement;
-  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { style: { padding: '24px', background: 'var(--scrim)', display: 'flex', justifyContent: 'center' } }, h(B.CommandPalette, { query: 'comb', activeIndex: 0, items: [{ icon: 'comb', label: 'Open comb view', hint: 'View', shortcut: '⌘G' }, { icon: 'note', label: 'Comb cell sizing', hint: 'Hive / Notes' }, { icon: 'tag', label: 'Filter comb by tag', hint: 'View' }, { icon: 'new-note', label: 'New note in this folder', shortcut: '⌘N' }] })));
+  ReactDOM.createRoot(document.getElementById('root')).render(h('div', { style: { padding: '24px', background: 'var(--scrim)', display: 'flex', justifyContent: 'center' } }, h(B.CommandPalette, { query: 'comb', activeIndex: 0, items: [{ icon: 'comb', label: 'Open comb view', hint: 'View', shortcut: '⌘G' }, { icon: 'note', label: 'Comb cell sizing', hint: 'Field notes' }, { icon: 'tag', label: 'Filter comb by tag', hint: 'View' }, { icon: 'new-note', label: 'New note in this folder', shortcut: '⌘N' }] })));
 </script>
 </body>
 </html>

@@ -1,0 +1,28 @@
+<!-- @dsCard group="Feedback" height=420 subtitle="Empty hive, and compact panel states" -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>EmptyState — preview</title>
+<style>
+  .grid { display: grid; grid-template-columns: 1fr 260px; height: 420px; }
+  .side { display: flex; flex-direction: column; justify-content: center; background: var(--surface-sunken); border-left: 1px solid var(--line); }
+  .side + .side { border-top: 1px solid var(--line); }
+  .col { display: flex; flex-direction: column; }
+  .col > .side { flex: 1; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  var B = window.Basalt, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    h('div', { className: 'grid' },
+      h(B.EmptyState, {
+        illustration: 'causeway', title: 'Nothing in this cell yet',
+        actions: [h(B.Button, { key: 'n', variant: 'primary', icon: 'new-note' }, 'New note'), h(B.Button, { key: 'i', variant: 'secondary' }, 'Import a Markdown folder')]
+      }, h('p', null, 'Start with one note. Link it to the next with [[ and the comb grows from there.')),
+      h('div', { className: 'col' },
+        h('div', { className: 'side' }, h(B.EmptyState, { compact: true, icon: 'backlinks', title: 'No backlinks yet' }, 'Notes that link to Giant’s Causeway will show up here.')),
+        h('div', { className: 'side' }, h(B.EmptyState, { compact: true, icon: 'search', title: 'No notes match “colonade”', actions: h(B.Button, { variant: 'quiet', size: 'sm' }, 'Search all hives') }, 'Check the spelling, or widen the search.')))));
+</script>
+</body>
+</html>

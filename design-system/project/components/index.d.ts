@@ -47,8 +47,14 @@ export interface CombCell { q: number; r: number; label?: string; title?: string
 export interface CombProps { cells: CombCell[]; cellSize?: number; label?: string; className?: string }
 export declare function Comb(props: CombProps): React.ReactElement;
 
+export interface EmptyStateProps { title: React.ReactNode; children?: React.ReactNode; actions?: React.ReactNode; icon?: IconName; illustration?: 'causeway'; compact?: boolean; pattern?: boolean; className?: string }
+export declare function EmptyState(props: EmptyStateProps): React.ReactElement;
+
+export interface HoverPreviewProps { title: string; path?: string; children?: React.ReactNode; heading?: string; tags?: string[]; meta?: string; backlinks?: number; maxLines?: number; onOpen?: () => void; unresolved?: boolean; onCreate?: () => void; style?: React.CSSProperties; className?: string }
+export declare function HoverPreview(props: HoverPreviewProps): React.ReactElement;
+
 declare global {
   interface Window {
-    Basalt: { Logo: typeof Logo; Icon: typeof Icon; Button: typeof Button; Kbd: typeof Kbd; Tag: typeof Tag; Task: typeof Task; Wikilink: typeof Wikilink; Callout: typeof Callout; HexAvatar: typeof HexAvatar; SearchField: typeof SearchField; TreeItem: typeof TreeItem; Tabs: typeof Tabs; CommandPalette: typeof CommandPalette; Comb: typeof Comb };
+    Basalt: { Logo: typeof Logo; Icon: typeof Icon; Button: typeof Button; Kbd: typeof Kbd; Tag: typeof Tag; Task: typeof Task; Wikilink: typeof Wikilink; Callout: typeof Callout; HexAvatar: typeof HexAvatar; SearchField: typeof SearchField; TreeItem: typeof TreeItem; Tabs: typeof Tabs; CommandPalette: typeof CommandPalette; Comb: typeof Comb; EmptyState: typeof EmptyState; HoverPreview: typeof HoverPreview };
   }
 }
