@@ -1,0 +1,7 @@
+{
+  "name": "@basalt/ai",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": { "@basalt/core": "0.1.0" }
+}

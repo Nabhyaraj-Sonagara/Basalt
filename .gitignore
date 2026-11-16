@@ -1,0 +1,12 @@
+node_modules/
+dist/
+out/
+release/
+*.log
+.DS_Store
+packages/ui/src/generated/
+fixtures/**/.basalt/index/
+fixtures/**/.basalt/snapshots/
+fixtures/**/.basalt/trash/
+fixtures/**/.basalt/workspace.json
+apps/desktop/e2e/screenshots/
