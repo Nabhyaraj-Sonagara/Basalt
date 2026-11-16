@@ -105,14 +105,14 @@ describe('semantic search', () => {
   });
 
   it('chunks notes by section', () => {
-    const chunks = chunkNote('a.md', 'A', '---\nx: 1\n---\nintro\n## One\nfirst\n## Two\nsecond');
+    const chunks = chunkNote('a.md', 'A', '---\nx: 1\n---\nintro words here\n## One\nfirst part text\n## Two\nsecond part text\n## Tiny');
     expect(chunks.map((c) => c.heading)).toEqual(['', 'One', 'Two']);
-    expect(chunks[1].text).toBe('A › One\n## One\nfirst');
+    expect(chunks[1].text).toBe('A › One\n## One\nfirst part text');
   });
 
   it('indexes incrementally, searches and suggests related notes', async () => {
     const idx = new SemanticIndex(hive, new HashedEmbedder());
-    expect((await idx.update()).embedded).toBe(6);
+    expect((await idx.update()).embedded).toBe(5);
     expect((await idx.update()).embedded).toBe(0);
     const hits = await idx.search('embeds pull content in place');
     expect(hits[0].path).toBe('Linking notes.md');

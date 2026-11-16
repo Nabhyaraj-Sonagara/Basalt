@@ -101,9 +101,12 @@ export class SemanticIndex {
   private async doUpdate(onProgress?: (done: number, total: number) => void, signal?: AbortSignal): Promise<{ embedded: number; removed: number }> {
     await this.load();
     let removed = 0;
-    for (const p of [...this.notes.keys()]) if (!this.hive.notes.has(p)) { this.notes.delete(p); removed++; }
+    const tplFolder = this.hive.settings.templates.folder;
+    for (const p of [...this.notes.keys()]) if (!this.hive.notes.has(p) || (tplFolder && p.startsWith(tplFolder + '/'))) { this.notes.delete(p); removed++; }
     const stale: { path: string; hash: string; text: string; title: string }[] = [];
+    const templates = this.hive.settings.templates.folder;
     for (const rec of this.hive.notes.values()) {
+      if (templates && rec.path.startsWith(templates + '/')) continue;
       const text = this.hive.text(rec.path) ?? '';
       const hash = fnv(text);
       if (this.notes.get(rec.path)?.hash !== hash) stale.push({ path: rec.path, hash, text, title: rec.title });

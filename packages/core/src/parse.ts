@@ -141,6 +141,16 @@ export function parseNote(text: string): NoteMeta {
     (ref.embed ? embeds : links).push(ref);
   }
 
+  // Wikilinks inside frontmatter values (e.g. `owner: "[[People/Ada]]"`) count as links too.
+  if (fmSplit.yaml) {
+    const fmWiki = /\[\[([^[\]\n]+?)\]\]/g;
+    const fmText = text.slice(0, fmSplit.bodyStart);
+    for (let m; (m = fmWiki.exec(fmText)); ) {
+      const start = m.index;
+      links.push({ raw: m[0], ...parseLinktext(m[1]), embed: false, kind: 'wiki', start, end: start + m[0].length, line: lineAt(starts, start) });
+    }
+  }
+
   const md = /(!?)\[([^\]\n]*)\]\(\s*(<[^>\n]+>|[^)\s]+)(?:\s+"[^"\n]*")?\s*\)/g;
   for (let m; (m = md.exec(masked)); ) {
     let href = text.slice(m.index, m.index + m[0].length).match(/\]\(\s*(<[^>\n]+>|[^)\s]+)/)?.[1] ?? '';

@@ -21,7 +21,7 @@ export function chunkNote(path: string, title: string, text: string, maxChars = 
     let bufStart = start;
     const flush = () => {
       const body = buf.join('\n').trim();
-      if (body) chunks.push({ path, heading: s.heading, line: bufStart, text: `${title}${s.heading ? ' › ' + s.heading : ''}\n${body}` });
+      if (body && (body.match(/[\p{L}\p{N}]+/gu)?.length ?? 0) >= 3) chunks.push({ path, heading: s.heading, line: bufStart, text: `${title}${s.heading ? ' › ' + s.heading : ''}\n${body}` });
       buf = [];
     };
     for (let i = start; i <= s.endLine && i < lines.length; i++) {
