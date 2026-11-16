@@ -21,7 +21,7 @@ export function splitFrontmatter(text: string): FrontmatterSplit {
     return { frontmatter: {}, yaml: null, bodyStart: 0 };
   }
   try {
-    const data = parseYaml(m[1]) as unknown;
+    const data = parseYaml(m[1], { logLevel: 'silent' }) as unknown;
     const fm = data && typeof data === 'object' && !Array.isArray(data) ? (data as Record<string, unknown>) : {};
     return { frontmatter: fm, yaml: m[1], bodyStart: m[0].length };
   } catch (err) {
