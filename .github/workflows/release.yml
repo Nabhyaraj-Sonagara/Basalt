@@ -34,10 +34,10 @@ jobs:
       WIN_CSC_LINK: ${{ secrets.WIN_CERTIFICATE_P12_BASE64 }}
       WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CERTIFICATE_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag || github.ref }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
