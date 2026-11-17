@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events';
 import { promises as fs, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { parseCanvas, serializeCanvas, canvasFileRefs } from './canvas';
-import { maskNonContent, parseNote, subpathText } from './parse';
+import { maskNonContent, parseNote, splitFrontmatter, subpathText } from './parse';
 import { safeRelPath } from './path';
 import { propertyCatalog, queryNotes, setFrontmatter, type NoteQuery, type PropertyInfo, type QueryRow } from './properties';
 import { rewriteLinks } from './rename';
@@ -422,6 +422,55 @@ export class Hive extends EventEmitter {
     }
     this.emit('change', { type: 'rename', path: to, oldPath: from } satisfies HiveEvent);
     return { path: to, oldPath: from, updated };
+  }
+
+  /**
+   * Merges note `source` into note `target`: appends its body under a heading named after it,
+   * points every link at `target` instead, then moves `source` to the trash.
+   */
+  async merge(source: string, target: string): Promise<{ path: string; updated: string[] }> {
+    const from = safeRelPath(source);
+    const to = safeRelPath(target);
+    if (from === to) throw new Error('Pick a different note to merge into.');
+    if (!isNote(from) || !this.notes.has(from)) throw new Error(`No such note: ${from}`);
+    if (!isNote(to) || !this.notes.has(to)) throw new Error(`No such note: ${to}`);
+    const title = this.notes.get(from)!.title;
+    const body = (() => {
+      const text = this.texts.get(from) ?? '';
+      return text.slice(splitFrontmatter(text).bodyStart).trim();
+    })();
+    const current = (await this.read(to)).replace(/\s*$/, '');
+    await this.write(to, `${current}${current ? '\n\n' : ''}## ${title}\n\n${body}\n`);
+
+    const aliases = (skip?: string) => [...this.notes.values()].filter((n) => n.path !== skip).map((n) => [n.path, n.aliases] as [string, string[]]);
+    const before = new LinkResolver(this.resolver.paths(), aliases());
+    const after = new LinkResolver(this.resolver.paths().filter((p) => p !== from), aliases(from));
+    const moves = new Map([[from, to]]);
+    const updated: string[] = [];
+    for (const [path, rec] of [...this.notes]) {
+      if (path === from || (!rec.links.length && !rec.embeds.length)) continue;
+      const res = rewriteLinks(this.texts.get(path)!, path, path, moves, before, after);
+      if (res.changed) {
+        await this.write(path, res.text);
+        updated.push(path);
+      }
+    }
+    for (const [path, text] of [...this.texts]) {
+      if (extOf(path) !== CANVAS_EXT) continue;
+      try {
+        const c = parseCanvas(text);
+        let changed = false;
+        for (const n of c.nodes) if (n.type === 'file' && n.file === from) { n.file = to; changed = true; }
+        if (changed) {
+          await this.write(path, serializeCanvas(c));
+          updated.push(path);
+        }
+      } catch {
+        /* leave invalid canvases alone */
+      }
+    }
+    await this.trash(from);
+    return { path: to, updated };
   }
 
   /** Moves a file or folder to `.basalt/trash/` (recoverable). */
