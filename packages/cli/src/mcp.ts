@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import type { Readable, Writable } from 'node:stream';
 import { z } from 'zod';
 import { CONFIG_DIR, parseMindmap, serializeMindmap, type Hive } from '@basalt/core';
 import { newNotePath, resolveNote, semanticIndex } from './notes';
@@ -195,8 +196,9 @@ export function createMcpServer(hive: Hive): McpServer {
   return server;
 }
 
-export async function runMcp(hive: Hive): Promise<void> {
+/** Serves the hive over stdio. `io` swaps in other streams (the desktop app needs this on Windows). */
+export async function runMcp(hive: Hive, io: { stdin?: Readable; stdout?: Writable } = {}): Promise<void> {
   await hive.watch();
   const server = createMcpServer(hive);
-  await server.connect(new StdioServerTransport());
+  await server.connect(new StdioServerTransport(io.stdin, io.stdout));
 }

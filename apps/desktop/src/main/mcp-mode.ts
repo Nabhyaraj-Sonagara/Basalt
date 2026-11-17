@@ -2,9 +2,41 @@
 // Claude Desktop, Claude Code and Codex launch this, so connecting them needs no Node install
 // and they use the person's own subscription in their own apps.
 import { app } from 'electron';
+import { createReadStream, fstatSync } from 'node:fs';
+import { Socket } from 'node:net';
 import { join, resolve } from 'node:path';
+import type { Readable } from 'node:stream';
 import { Hive } from '@basalt/core';
 import { runMcp } from '@basalt/cli/mcp';
+
+const log = (msg: string) => process.stderr.write(`basalt --mcp: ${msg}\n`);
+
+/**
+ * Electron's main process on Windows gives Node an empty stdin even when the parent passes a pipe,
+ * so open the inherited handle (fd 0) directly.
+ */
+function windowsStdin(): Readable | undefined {
+  try {
+    const st = fstatSync(0);
+    log(`fd 0: ${st.isFIFO() ? 'pipe' : st.isFile() ? 'file' : st.isCharacterDevice() ? 'char' : st.isSocket() ? 'socket' : 'other'}`);
+  } catch (err) {
+    log(`fd 0 unavailable: ${(err as Error).message}`);
+  }
+  const tries: [string, () => Readable][] = [
+    ['pipe socket', () => new Socket({ fd: 0, readable: true, writable: false })],
+    ['file stream', () => createReadStream('', { fd: 0, autoClose: false })],
+  ];
+  for (const [name, make] of tries) {
+    try {
+      const s = make();
+      log(`reading stdin as a ${name}`);
+      return s;
+    } catch (err) {
+      log(`stdin as a ${name} failed: ${(err as Error).message}`);
+    }
+  }
+  return undefined;
+}
 
 export function startMcpMode(): void {
   // stdout carries the MCP protocol; keep everything else on stderr.
@@ -34,13 +66,14 @@ export function startMcpMode(): void {
     }
     try {
       const hive = await Hive.open(resolve(arg));
-      await runMcp(hive);
-      process.stderr.write(`basalt --mcp: serving ${hive.name} on stdio\n`);
-      process.stdin.on('end', () => {
-        process.stderr.write('basalt --mcp: stdin ended\n');
+      const stdin = (process.platform === 'win32' ? windowsStdin() : undefined) ?? process.stdin;
+      await runMcp(hive, { stdin });
+      log(`serving ${hive.name} on stdio`);
+      stdin.on('end', () => {
+        log('stdin ended');
         app.quit();
       });
-      process.stdin.on('close', () => app.quit());
+      stdin.on('close', () => app.quit());
     } catch (err) {
       process.stderr.write(`basalt --mcp: ${(err as Error).message}\n`);
       app.exit(1);
