@@ -159,16 +159,19 @@ export function IllustrateDialog() {
   const [busy, setBusy] = useState<string | null>(null);
   const file = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    setSource(open.source === 'note' && !notePath ? 'sketch' : open.source);
-    setKind(open.kind ?? (open.source === 'note' ? 'mindmap' : 'flowchart'));
-    setPicture(null);
-    setSketch(null);
-    setExtra('');
-    setBusy(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  // Reset when the dialog opens, during render so the first frame already shows the right choices.
+  const [openedWith, setOpenedWith] = useState(open);
+  if (open !== openedWith) {
+    setOpenedWith(open);
+    if (open) {
+      setSource(open.source === 'note' && !notePath ? 'sketch' : open.source);
+      setKind(open.kind ?? (open.source === 'note' ? 'mindmap' : 'flowchart'));
+      setPicture(null);
+      setSketch(null);
+      setExtra('');
+      setBusy(null);
+    }
+  }
 
   if (!open) return null;
   const close = () => {
