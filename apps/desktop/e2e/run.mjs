@@ -255,7 +255,8 @@ await step('spellcheck setting turns on the spellchecker; about page shows the v
   await sleep(500);
   assert.equal(await app.evaluate(({ session }) => session.defaultSession.isSpellCheckerEnabled()), true);
   await page.locator('.settings-nav button:text("About and updates")').click();
-  await page.waitForSelector('.bs-setting-label:text("Version 0.1.0")');
+  const { version } = JSON.parse(readFileSync(join(root, 'apps/desktop/package.json'), 'utf8'));
+  await page.waitForSelector(`.bs-setting-label:text("Version ${version}")`);
   await page.keyboard.press('Escape');
 });
 
