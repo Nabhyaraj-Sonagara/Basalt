@@ -110,7 +110,7 @@ mark { background: var(--pollen); color: var(--on-honey); border-radius: var(--r
 /* ---------- note view ---------- */
 .note-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .note-scroll { flex: 1; min-height: 0; overflow: auto; padding: var(--space-12) var(--space-12) 0; }
-.note-view.readable .note-head, .note-view.readable .cm-content, .note-view.readable .reading { max-width: 680px; margin-left: auto; margin-right: auto; }
+.note-view.readable .note-head, .note-view.readable .cm-content, .note-view.readable .reading { max-width: var(--line-width, 680px); margin-left: auto; margin-right: auto; }
 .note-view .cm-editor { height: auto; }
 .note-view .cm-scroller { overflow: visible; }
 .note-head { margin-bottom: var(--space-6); }
@@ -398,3 +398,35 @@ mark { background: var(--pollen); color: var(--on-honey); border-radius: var(--r
 .sync-conflicts .plain { color: var(--link); text-decoration: underline; }
 .status-btn.sync-idle { color: var(--moss); }
 .status-btn.sync-error { color: var(--ember); }
+
+/* ---------- Appearance (lib/appearance.ts) ---------- */
+:root { --icon-size: 20px; }
+:root[data-ui-font="system"] { --font-sans: var(--font-ui-override); }
+.reading.prose, .note-view .prose { font-family: var(--editor-font, var(--font-serif)); font-size: var(--editor-size, 17px); line-height: var(--editor-line, 28px); }
+/* Toolbar and panel-tab icons follow the icon size setting. */
+.side-actions .bs-btn-icononly, .edge-toggles .bs-btn-icononly { width: calc(var(--icon-size) + 14px); height: calc(var(--icon-size) + 14px); }
+.side-actions .bs-btn-icononly svg, .edge-toggles .bs-btn-icononly svg, .side-view svg { width: var(--icon-size); height: var(--icon-size); }
+.side-view { height: calc(var(--icon-size) + 16px); }
+.side-actions { gap: 2px; flex-wrap: wrap; }
+.crest-btn { background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; border-radius: var(--radius-md); }
+.crest-btn:hover .hive-crest { filter: brightness(1.05); transform: translateY(-1px); }
+.crest-btn:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+.hive-crest { display: block; transition: transform var(--duration-fast) var(--ease-settle); }
+/* Compact density tightens rows across the app. */
+:root[data-density="compact"] .bs-tree-item { min-height: 24px; padding-top: 1px; padding-bottom: 1px; }
+:root[data-density="compact"] .side-view { height: calc(var(--icon-size) + 8px); }
+:root[data-density="compact"] .sidebar { gap: var(--space-1); }
+:root[data-density="compact"] .bs-setting { padding-top: var(--space-2); padding-bottom: var(--space-2); }
+/* Appearance settings */
+.swatches { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line-strong); cursor: pointer; padding: 0; }
+.swatch.on { box-shadow: 0 0 0 2px var(--ink); }
+.swatch-custom { width: 30px; height: 30px; border: 0; background: none; padding: 0; cursor: pointer; }
+.toolbar-editor { display: grid; gap: 2px; padding: var(--space-2) var(--space-4) var(--space-4); }
+.toolbar-row { display: flex; align-items: center; gap: var(--space-2); padding: 2px 0; }
+.toolbar-row .name { flex: 1; }
+.toolbar-row .bs-btn { visibility: hidden; }
+.toolbar-row:hover .bs-btn, .toolbar-row:focus-within .bs-btn { visibility: visible; }
+.crest-pick { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.emoji-input { width: 64px; text-align: center; font-size: 18px; }
+.pad-row { padding: var(--space-3) var(--space-4); }

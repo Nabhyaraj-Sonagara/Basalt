@@ -84,8 +84,8 @@ const formatKeys: KeyBinding[] = [
 ];
 
 export const editorTheme = EditorView.theme({
-  '&': { height: '100%', backgroundColor: 'transparent', color: 'var(--ink)', fontFamily: 'var(--font-serif)', fontSize: '17px' },
-  '.cm-scroller': { fontFamily: 'inherit', lineHeight: '28px', overflow: 'auto' },
+  '&': { height: '100%', backgroundColor: 'transparent', color: 'var(--ink)', fontFamily: 'var(--editor-font, var(--font-serif))', fontSize: 'var(--editor-size, 17px)' },
+  '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'var(--editor-line, 28px)', overflow: 'auto' },
   '.cm-content': { caretColor: 'var(--honey-text)', padding: '0 0 40vh' },
   '&.cm-focused': { outline: 'none' },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--honey-text)', borderLeftWidth: '2px' },

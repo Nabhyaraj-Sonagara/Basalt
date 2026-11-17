@@ -19,11 +19,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
 
 const userData = mkdtempSync(join(tmpdir(), 'basalt-ud-'));
+// A fake home folder, so "Connect" writes AI app configs there and never to the real ones.
+const fakeHome = mkdtempSync(join(tmpdir(), 'basalt-home-'));
+mkdirSync(join(fakeHome, '.codex'));
 const launch = (extra) =>
   electron.launch({
     executablePath: createRequire(import.meta.url)('electron'),
     args: [join(root, 'apps/desktop'), '--no-sandbox', `--user-data-dir=${userData}`, ...extra],
-    env: { ...process.env, BASALT_NO_UPDATES: '1' },
+    env: { ...process.env, BASALT_NO_UPDATES: '1', HOME: fakeHome, USERPROFILE: fakeHome, XDG_CONFIG_HOME: join(fakeHome, '.config'), APPDATA: join(fakeHome, 'AppData'), CODEX_HOME: join(fakeHome, '.codex') },
   });
 let app = await launch([`--hive=${hive}`]);
 let page = await app.firstWindow();
@@ -169,9 +172,9 @@ await step('settings and assistant setup', async () => {
   await page.locator('.settings-nav button:text("Assistant")').click();
   await page.waitForSelector('.settings-body .bs-settings');
   await shot('10-settings-assistant');
-  await page.locator('.settings-nav button:text("Agents and CLI")').click();
+  await page.locator('.settings-nav button:text("AI apps and agents")').click();
   await page.waitForSelector('.copy-block');
-  assert.match(await page.locator('.copy-block pre').first().innerText(), /claude mcp add basalt/);
+  assert.match(await page.locator('.copy-block pre').first().innerText(), /--mcp/);
   await shot('11-settings-agents');
   await page.keyboard.press('Escape');
 });
@@ -257,6 +260,43 @@ await step('spellcheck setting turns on the spellchecker; about page shows the v
   await page.locator('.settings-nav button:text("About and updates")').click();
   const { version } = JSON.parse(readFileSync(join(root, 'apps/desktop/package.json'), 'utf8'));
   await page.waitForSelector(`.bs-setting-label:text("Version ${version}")`);
+  await page.keyboard.press('Escape');
+});
+
+await step('customize: bigger icons, an accent colour, toolbar buttons and the hive crest', async () => {
+  const iconWidth = () => page.locator('.side-actions svg').first().evaluate((el) => el.getBoundingClientRect().width);
+  assert.equal(Math.round(await iconWidth()), 20);
+  assert.ok(await page.locator('.sidebar .hive-crest').isVisible());
+  await page.keyboard.press(`${mod}+,`);
+  await page.locator('.settings-nav button:text("Appearance")').click();
+  await page.locator('button[aria-label="Sky accent"]').click();
+  assert.equal((await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--honey'))).trim(), '#3f7fb3');
+  await page.locator('.bs-setting', { hasText: 'Icon size' }).locator('select').selectOption('24');
+  await page.locator('input[aria-label="Show Open a random note in the toolbar"]').check();
+  await page.fill('input[aria-label="Hive emoji"]', '📚');
+  await page.locator('form:has(input[aria-label="Hive emoji"]) button[type=submit]').click();
+  await sleep(300);
+  await page.screenshot({ path: join(out, '15-appearance-settings.png') });
+  await page.keyboard.press('Escape');
+  assert.equal(Math.round(await iconWidth()), 24);
+  assert.ok(await page.locator('.side-actions button[aria-label="Open a random note"]').isVisible());
+  assert.match(await page.locator('.sidebar .hive-crest').innerHTML(), /📚/);
+  assert.match(read('.basalt/appearance.json'), /📚/);
+  await page.screenshot({ path: join(out, '16-customized-sidebar.png') });
+  // Back to the defaults for the remaining checks.
+  await page.evaluate(() => localStorage.removeItem('basalt.appearance'));
+});
+
+await step('connect Codex to the hive with one click', async () => {
+  await page.keyboard.press(`${mod}+,`);
+  await page.locator('.settings-nav button:text("AI apps and agents")').click();
+  const row = page.locator('.bs-setting', { hasText: 'Codex (ChatGPT)' });
+  await row.locator('button:has-text("Connect")').click();
+  await row.locator('button:has-text("Disconnect")').waitFor({ timeout: 5000 });
+  const toml = readFileSync(join(fakeHome, '.codex', 'config.toml'), 'utf8');
+  assert.match(toml, /\[mcp_servers\.basalt-sample\]/);
+  assert.match(toml, /--mcp/);
+  await page.screenshot({ path: join(out, '17-connect-apps.png') });
   await page.keyboard.press('Escape');
 });
 

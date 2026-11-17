@@ -34,7 +34,7 @@ export async function openHive(path: string, create = false): Promise<void> {
       api().hive.readConfig<{ panes: PaneState[]; activePane: string; leftView?: string; rightView?: string }>('workspace.json'),
       api().hive.readConfig<Record<string, string>>('hotkeys.json'),
       api().hive.snippets(),
-      api().hive.readConfig<{ enabledSnippets?: string[] }>('appearance.json'),
+      api().hive.readConfig<HiveAppearance>('appearance.json'),
     ]);
     const files = new Set(snap.files.map((f) => f.path));
     let panes = workspace?.panes
@@ -52,6 +52,7 @@ export async function openHive(path: string, create = false): Promise<void> {
       hotkeys: hotkeys ?? {},
       snippets,
       enabledSnippets: appearance?.enabledSnippets ?? [],
+      hiveIdentity: { icon: appearance?.icon || undefined, color: appearance?.color || undefined },
       expanded: new Set(),
       ...(workspace?.leftView ? { leftView: workspace.leftView as never } : {}),
       ...(workspace?.rightView ? { rightView: workspace.rightView as never } : {}),
@@ -506,4 +507,23 @@ export async function handleUri(u: UriRequest): Promise<void> {
     if (created) openPath(created, { newTab: true });
   } else if (u.action === 'daily') await openDailyNote(0);
   else showSearch(u.query ?? '');
+}
+
+// ---------- hive appearance (.basalt/appearance.json) ----------
+
+export interface HiveAppearance {
+  enabledSnippets?: string[];
+  /** An emoji shown instead of the generated crest. */
+  icon?: string;
+  /** The crest's colour (hex). */
+  color?: string;
+}
+
+/** Merges a change into .basalt/appearance.json, keeping the other fields. */
+export async function saveHiveAppearance(patch: Partial<HiveAppearance>): Promise<void> {
+  const current = (await api().hive.readConfig<HiveAppearance>('appearance.json')) ?? {};
+  const next = { ...current, ...patch };
+  for (const k of Object.keys(next) as (keyof HiveAppearance)[]) if (next[k] === undefined || next[k] === '') delete next[k];
+  await api().hive.writeConfig('appearance.json', next);
+  setState({ enabledSnippets: next.enabledSnippets ?? [], hiveIdentity: { icon: next.icon, color: next.color } });
 }

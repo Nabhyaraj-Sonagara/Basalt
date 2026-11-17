@@ -9,6 +9,7 @@ import { PromptDialog, RecoveryDialog } from './components/Dialogs';
 import { HoverLayer } from './components/HoverLayer';
 import { Toasts } from './components/Toasts';
 import { StartScreen } from './components/StartScreen';
+import { useAppearance } from './lib/appearance';
 import { SYNC_TEXT, useSyncStatus } from './components/SyncSettings';
 import { api, go, handleChanges, handleUri, makeTab, openHive, scheduleWorkspaceSave } from './lib/actions';
 import { commandById, runHotkey } from './lib/commands';
@@ -67,6 +68,7 @@ function Workspace() {
   const leftOpen = useStore((s) => s.leftOpen);
   const rightOpen = useStore((s) => s.rightOpen);
   const popout = useStore((s) => !!s.popout);
+  const statusBar = useAppearance().statusBar;
   useEffect(() => scheduleWorkspaceSave(), [leftOpen, rightOpen]);
   return (
     <div className={`workspace${leftOpen ? '' : ' no-left'}${rightOpen ? '' : ' no-right'}`}>
@@ -81,7 +83,7 @@ function Workspace() {
         <Button size="sm" variant="quiet" icon="folder" aria-label={leftOpen ? 'Hide left sidebar' : 'Show left sidebar'} onClick={() => setState((s) => ({ leftOpen: !s.leftOpen }))} />
         <Button size="sm" variant="quiet" icon="backlinks" aria-label={rightOpen ? 'Hide right sidebar' : 'Show right sidebar'} onClick={() => setState((s) => ({ rightOpen: !s.rightOpen }))} />
       </div>
-      <StatusBar />
+      {statusBar ? <StatusBar /> : null}
     </div>
   );
 }
