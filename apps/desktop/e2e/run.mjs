@@ -26,7 +26,7 @@ const launch = (extra) =>
   electron.launch({
     executablePath: createRequire(import.meta.url)('electron'),
     args: [join(root, 'apps/desktop'), '--no-sandbox', `--user-data-dir=${userData}`, ...extra],
-    env: { ...process.env, BASALT_NO_UPDATES: '1', HOME: fakeHome, USERPROFILE: fakeHome, XDG_CONFIG_HOME: join(fakeHome, '.config'), APPDATA: join(fakeHome, 'AppData'), CODEX_HOME: join(fakeHome, '.codex') },
+    env: { ...process.env, BASALT_NO_UPDATES: '1', BASALT_CONNECT_HOME: fakeHome, XDG_CONFIG_HOME: join(fakeHome, '.config'), CODEX_HOME: join(fakeHome, '.codex') },
   });
 let app = await launch([`--hive=${hive}`]);
 let page = await app.firstWindow();

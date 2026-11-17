@@ -28,7 +28,9 @@ export function serverName(hiveName: string): string {
   return `basalt-${slug || 'hive'}`;
 }
 
-const home = () => homedir();
+// BASALT_CONNECT_HOME lets tests point Connect at a scratch folder without changing HOME,
+// which on macOS would also hide the login keychain from the app.
+const home = () => process.env.BASALT_CONNECT_HOME || homedir();
 
 function claudeDesktopConfig(): string {
   if (process.platform === 'darwin') return join(home(), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
