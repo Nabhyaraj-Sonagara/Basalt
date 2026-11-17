@@ -83,8 +83,8 @@ await step('opens the hive on Welcome in live preview', async () => {
 
 await step('reading view renders callouts, tasks, tags and highlights', async () => {
   await page.keyboard.press(`${mod}+E`);
-  await page.waitForSelector('.reading');
-  assert.ok(await page.locator('.reading .bs-callout-tip').isVisible());
+  // The note's text arrives asynchronously after the reading pane mounts.
+  await page.waitForSelector('.reading .bs-callout-tip');
   assert.equal(await page.locator('.reading li.task-item').count(), 3);
   assert.ok(await page.locator('.reading mark').count());
   assert.ok(!(await page.locator('.reading').innerText()).includes('comments stay hidden'));
