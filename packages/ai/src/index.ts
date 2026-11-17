@@ -7,3 +7,4 @@ export * from './registry';
 export { AnthropicProvider, DEFAULT_CLAUDE_MODEL } from './providers/anthropic';
 export { OpenAIProvider, OpenAIEmbedder } from './providers/openai';
 export { GeminiProvider, GeminiEmbedder } from './providers/gemini';
+export * from './illustrate';

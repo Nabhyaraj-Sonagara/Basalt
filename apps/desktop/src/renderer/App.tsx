@@ -6,6 +6,7 @@ import { RightPanel } from './components/RightPanel';
 import { Palette } from './components/Palette';
 import { Settings } from './components/Settings';
 import { PromptDialog, RecoveryDialog } from './components/Dialogs';
+import { IllustrateDialog } from './components/IllustrateDialog';
 import { HoverLayer } from './components/HoverLayer';
 import { Toasts } from './components/Toasts';
 import { StartScreen } from './components/StartScreen';
@@ -170,6 +171,7 @@ export function App() {
       <Settings />
       <PromptDialog />
       <RecoveryDialog />
+      <IllustrateDialog />
       <HoverLayer />
       <Toasts />
     </>

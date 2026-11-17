@@ -1,6 +1,7 @@
 // The contract between the Electron main process and the renderer.
 import type { Backlink, FileEntry, Graph, HiveSettings, SearchResult, TreeNode, UnlinkedMention, QueryRow, NoteQuery, PropertyInfo } from '@basalt/core/browser';
-import type { ProviderConfig, ChatMessage, SemanticHit, ProviderKind } from '@basalt/ai/types-only';
+import type { ProviderConfig, ChatMessage, SemanticHit, ProviderKind, ChatImage, IllustrationKind } from '@basalt/ai/types-only';
+export type { ChatImage, IllustrationKind };
 
 export interface NoteSummary {
   path: string;
@@ -11,6 +12,8 @@ export interface NoteSummary {
   blocks: string[];
   mtime: number;
   wordCount: number;
+  /** Frontmatter `view`, e.g. 'mindmap'. */
+  view?: string;
 }
 
 export interface HiveInfo {
@@ -45,6 +48,19 @@ export interface ChatStart {
   providerId: string;
   messages: ChatMessage[];
   context: { notePath?: string; selection?: string; useHive: boolean };
+}
+
+export interface IllustrateRequest {
+  /** Lets the renderer cancel the request. */
+  id?: string;
+  kind: IllustrationKind;
+  /** Note to illustrate. */
+  notePath?: string;
+  /** A sketch or photo to illustrate. */
+  image?: ChatImage;
+  instructions?: string;
+  /** Defaults to the assistant's chat model. */
+  providerId?: string;
 }
 
 export type ChatEvent = { id: string; type: 'delta'; text: string } | { id: string; type: 'done'; sources: string[] } | { id: string; type: 'error'; message: string };
@@ -213,6 +229,9 @@ export interface BasaltApi {
     useLocal(id: 'ollama' | 'lmstudio', model: string, embeddingModel?: string): Promise<AiSettings>;
     chat(req: ChatStart): Promise<void>;
     cancel(id: string): Promise<void>;
+    /** Asks the chat model for a mind-map outline or Mermaid diagram of a note or picture. */
+    illustrate(req: IllustrateRequest): Promise<{ text: string }>;
+    cancelIllustrate(id: string): Promise<void>;
     onChat(cb: (e: ChatEvent) => void): () => void;
     semanticSearch(query: string): Promise<SemanticHit[]>;
     related(path: string, unlinkedOnly?: boolean): Promise<SemanticHit[]>;

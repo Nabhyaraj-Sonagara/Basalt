@@ -44,6 +44,7 @@ describe('mind maps', () => {
     expect(t.children.map((c) => c.text)).toEqual(['Goals', 'Risks']);
     expect(t.children[0].children[0].children[0].text).toBe('Beta');
     expect(t.children[1].children.map((c) => c.text)).toEqual(['Time']);
+    expect(outlineFromNote('# Welcome to your hive\n\n## Try\n- One\n', 'Welcome').text).toBe('Welcome to your hive');
   });
 
   it('lays out a tree with parents centred on their children', () => {

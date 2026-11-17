@@ -40,7 +40,7 @@ const api: BasaltApi = {
   },
   connect: group('connect', ['status', 'add', 'remove', 'launchCommand']) as unknown as BasaltApi['connect'],
   ai: {
-    ...(group('ai', ['signInOpenRouter', 'detectLocal', 'useLocal', 'presets', 'settings', 'saveProvider', 'removeProvider', 'setChatProvider', 'setEmbeddings', 'listModels', 'chat', 'cancel', 'semanticSearch', 'related', 'reindex']) as unknown as Omit<
+    ...(group('ai', ['signInOpenRouter', 'detectLocal', 'useLocal', 'presets', 'settings', 'saveProvider', 'removeProvider', 'setChatProvider', 'setEmbeddings', 'listModels', 'chat', 'cancel', 'illustrate', 'cancelIllustrate', 'semanticSearch', 'related', 'reindex']) as unknown as Omit<
       BasaltApi['ai'],
       'onChat' | 'onIndexProgress'
     >),

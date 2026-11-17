@@ -73,7 +73,11 @@ export function outlineFromNote(text: string, title: string): MindNode {
     const h = /^(#{1,6})\s+(.+?)\s*#*\s*$/.exec(line);
     if (h) {
       const level = h[1].length;
-      if (level === 1 && headingStack.length === 1 && !root.children.length && h[2].toLowerCase() === title.toLowerCase()) continue;
+      // A leading title heading names the map instead of becoming its only branch.
+      if (level === 1 && headingStack.length === 1 && !root.children.length) {
+        root.text = h[2];
+        continue;
+      }
       while (headingStack.length > 1 && headingStack[headingStack.length - 1].level >= level) headingStack.pop();
       const node = mindNode(h[2]);
       headingStack[headingStack.length - 1].node.children.push(node);
