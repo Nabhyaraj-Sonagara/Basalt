@@ -1,0 +1,58 @@
+name: basalt
+# Basalt Sync on one server: the sync API, Postgres, and Caddy for HTTPS.
+# Usage: cp .env.example .env, edit it, then: docker compose up -d
+services:
+  sync:
+    image: ${SYNC_IMAGE:-ghcr.io/nabhyaraj-sonagara/basalt-sync:latest}
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://basalt:${POSTGRES_PASSWORD}@db:5432/basalt
+      SERVER_SECRET: ${SERVER_SECRET}
+      QUOTA_BYTES: ${QUOTA_BYTES:-1073741824}
+      MAX_FILE_BYTES: ${MAX_FILE_BYTES:-104857600}
+      ALLOW_SIGNUP: ${ALLOW_SIGNUP:-true}
+      TRUST_PROXY: 'true'
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-}
+    volumes:
+      - blobs:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: basalt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: basalt
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U basalt -d basalt']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      SYNC_DOMAIN: ${SYNC_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - sync
+
+volumes:
+  blobs:
+  pgdata:
+  caddy_data:
+  caddy_config:

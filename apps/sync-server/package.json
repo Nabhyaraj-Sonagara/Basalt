@@ -1,0 +1,22 @@
+{
+  "name": "@basalt/sync-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Basalt Sync server: stores end-to-end encrypted hives.",
+  "main": "src/main.ts",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node dist/server.mjs",
+    "dev": "node --import tsx src/main.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1170.0",
+    "pg": "^8.23.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@basalt/sync": "0.1.0",
+    "@types/pg": "^8.23.1"
+  }
+}

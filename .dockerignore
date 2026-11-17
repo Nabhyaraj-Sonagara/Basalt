@@ -1,0 +1,7 @@
+**/node_modules
+**/dist
+**/out
+**/release
+.git
+site-dist
+apps/desktop/e2e/screenshots
