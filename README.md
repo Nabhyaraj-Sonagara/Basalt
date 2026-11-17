@@ -76,13 +76,13 @@ git clone https://github.com/Nabhyaraj-Sonagara/Basalt.git
 cd Basalt
 ```
 
-Install the dependencies **from the repository root**. One install covers every package and the desktop app:
+Install the dependencies **from the repository root**. One install covers every package and the desktop app, and downloads Electron (about 100 MB):
 
 ```bash
 npm install
 ```
 
-Run the desktop app in development. The first run downloads Electron (about 100 MB):
+Run the desktop app in development:
 
 ```bash
 npm run dev
@@ -105,10 +105,10 @@ npm run package
 - **`sh: electron-vite: command not found`** (or `electron-builder` / `vitest`): the dependencies aren't installed. Run `npm install` from the repository root, not from `apps/desktop`, and wait for it to finish without errors. `npm run check` tells you what's missing.
 - **`npm install` fails with `EBADENGINE` or "Unsupported engine":** your Node is too old. Install Node 22 (see above), then run `npm install` again.
 - **`npm install` failed part-way:** npm rolls back on failure, so nothing is installed. Delete `node_modules` and run `npm ci`, then read the *first* error it prints.
-- **Electron's download fails or times out** on the first `npm run dev` (common behind proxies or firewalls): point it at a mirror and run it again:
+- **`Error: Electron uninstall`** or **Electron's download fails or times out** (common behind proxies or firewalls): the Electron binary didn't download. Point it at a mirror and fetch it again:
 
   ```bash
-  ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ npm run dev
+  ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ npx install-electron
   ```
 
 ## Connect an agent
