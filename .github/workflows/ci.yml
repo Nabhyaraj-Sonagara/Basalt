@@ -18,6 +18,17 @@ jobs:
   test:
     name: Typecheck and unit tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: basalt_test
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # The sync server's integration tests run against this database.
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/basalt_test
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -56,6 +67,65 @@ jobs:
         with:
           name: e2e-screenshots-${{ matrix.os }}
           path: apps/desktop/e2e/screenshots
+
+  sync-e2e:
+    name: Sync end-to-end (two app instances)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: basalt
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @basalt/sync-server
+      - name: Start the sync server
+        run: |
+          mkdir -p "$RUNNER_TEMP/blobs"
+          DATABASE_URL=postgres://postgres:postgres@localhost:5432/basalt SERVER_SECRET=$(openssl rand -hex 32) \
+            PORT=18080 DATA_DIR="$RUNNER_TEMP/blobs" nohup node apps/sync-server/dist/server.mjs > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:18080/healthz && exit 0; sleep 1; done
+          cat "$RUNNER_TEMP/server.log"; exit 1
+      - name: Sync two copies of the app through it
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq xvfb
+          npm run build -w @basalt/desktop
+          SYNC_URL=http://127.0.0.1:18080 SYNC_BLOB_DIR="$RUNNER_TEMP/blobs" xvfb-run -a node apps/desktop/e2e/sync.mjs
+      - if: failure()
+        run: cat "$RUNNER_TEMP/server.log"
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: sync-e2e-screenshots
+          path: apps/desktop/e2e/screenshots
+
+  sync-image:
+    name: Sync server Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build the image (not pushed)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/sync-server/Dockerfile
+          push: false
+          load: true
+          tags: basalt-sync:ci
+      - name: Check the image starts and refuses to run without its settings
+        run: |
+          out=$(docker run --rm basalt-sync:ci 2>&1 || true)
+          echo "$out"
+          echo "$out" | grep -q "Set DATABASE_URL"
 
   package:
     name: Package (${{ matrix.os }})

@@ -71,6 +71,22 @@ export interface UriRequest {
   error?: string;
 }
 
+export interface SyncStatus {
+  /** Sync server address ('' until set). */
+  server: string;
+  email: string | null;
+  signedIn: boolean;
+  /** False when the OS keychain isn't available; then sign-in lasts until Basalt quits. */
+  keychain: boolean;
+  /** The remote hive the open hive syncs with. */
+  linked: { hiveId: string; name: string; paused: boolean } | null;
+  state: 'off' | 'idle' | 'syncing' | 'paused' | 'offline' | 'error';
+  lastSync: number | null;
+  error: string | null;
+  /** Conflict copies made this session (hive paths). */
+  conflicts: string[];
+}
+
 export interface AppInfo {
   version: string;
   platform: string;
@@ -134,6 +150,21 @@ export interface BasaltApi {
     saveAttachment(name: string, data: Uint8Array): Promise<string>;
     fileUrl(path: string): string;
     onChange(cb: (changes: HiveChange[]) => void): () => void;
+  };
+  sync: {
+    status(): Promise<SyncStatus>;
+    setServer(url: string): Promise<SyncStatus>;
+    signUp(email: string, password: string): Promise<SyncStatus>;
+    signIn(email: string, password: string): Promise<SyncStatus>;
+    signOut(): Promise<SyncStatus>;
+    usage(): Promise<{ usageBytes: number; quotaBytes: number } | null>;
+    remoteHives(): Promise<{ id: string; name: string }[]>;
+    /** Links the open hive to a remote hive, or to a new one when `remoteId` is null. */
+    connect(remoteId: string | null): Promise<SyncStatus>;
+    disconnect(): Promise<SyncStatus>;
+    setPaused(paused: boolean): Promise<SyncStatus>;
+    now(): Promise<SyncStatus>;
+    onStatus(cb: (s: SyncStatus) => void): () => void;
   };
   ai: {
     presets(): Promise<{ id: string; kind: ProviderKind; label: string; baseUrl?: string; model: string; embeddingModel?: string; needsKey: boolean; local?: boolean }[]>;

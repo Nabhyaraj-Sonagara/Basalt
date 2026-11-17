@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button, Kbd, Select, SettingRow, SettingsGroup, Toggle, Icon } from '@basalt/ui';
 import type { HiveSettings } from '@basalt/core/browser';
 import type { AiSettings, ProviderSettings, UpdateStatus } from '../../shared/api';
+import { SyncSection } from './SyncSettings';
 import { COMMANDS, eventToHotkey, formatHotkey, hotkeyFor } from '../lib/commands';
 import { api, errorToast } from '../lib/actions';
 import { getState, setState, setTheme, toast, updateToast, dismissToast, useStore } from '../lib/store';
@@ -14,6 +15,7 @@ const SECTIONS = [
   { id: 'hotkeys', label: 'Hotkeys' },
   { id: 'assistant', label: 'Assistant' },
   { id: 'agents', label: 'Agents and CLI' },
+  { id: 'sync', label: 'Sync' },
   { id: 'about', label: 'About and updates' },
 ];
 
@@ -457,6 +459,7 @@ export function Settings() {
           {open === 'hotkeys' ? <HotkeysSection /> : null}
           {open === 'assistant' ? <AssistantSection /> : null}
           {open === 'agents' ? <AgentsSection /> : null}
+          {open === 'sync' ? <SyncSection /> : null}
           {open === 'about' ? <AboutSection /> : null}
         </div>
       </div>

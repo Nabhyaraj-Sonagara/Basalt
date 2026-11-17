@@ -34,6 +34,10 @@ const api: BasaltApi = {
     fileUrl: (path: string) => `basalt-file://hive/${path.split('/').map(encodeURIComponent).join('/')}`,
     onChange: (cb) => subscribe('hive:change', cb),
   },
+  sync: {
+    ...(group('sync', ['status', 'setServer', 'signUp', 'signIn', 'signOut', 'usage', 'remoteHives', 'connect', 'disconnect', 'setPaused', 'now']) as unknown as Omit<BasaltApi['sync'], 'onStatus'>),
+    onStatus: (cb) => subscribe('sync:status', cb),
+  },
   ai: {
     ...(group('ai', ['presets', 'settings', 'saveProvider', 'removeProvider', 'setChatProvider', 'setEmbeddings', 'listModels', 'chat', 'cancel', 'semanticSearch', 'related', 'reindex']) as unknown as Omit<
       BasaltApi['ai'],

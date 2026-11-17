@@ -1,0 +1,15 @@
+# Caddy gets and renews a Let's Encrypt certificate for SYNC_DOMAIN automatically.
+{$SYNC_DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size 110MB
+	}
+	reverse_proxy sync:8080 {
+		# Keep server-sent event streams open.
+		flush_interval -1
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}

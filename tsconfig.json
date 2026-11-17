@@ -1,4 +1,4 @@
 {
   "extends": "./tsconfig.base.json",
-  "include": ["packages/*/src/**/*", "packages/*/test/**/*", "apps/desktop/src/**/*", "apps/desktop/electron.vite.config.ts"]
+  "include": ["packages/*/src/**/*", "packages/*/test/**/*", "apps/desktop/src/**/*", "apps/sync-server/src/**/*", "apps/sync-server/test/**/*", "apps/desktop/electron.vite.config.ts"]
 }

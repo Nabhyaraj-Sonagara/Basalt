@@ -15,6 +15,7 @@ import {
 import type { AiSettings, AppInfo, ChatStart, HiveChange, HiveSnapshot, NoteSummary, ProviderSettings, UriRequest } from '../shared/api';
 import { editableContextMenu, installMenu } from './menu';
 import { checkForUpdates, initUpdater, installUpdate, updateStatus } from './updater';
+import { SyncController } from './sync';
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL;
 const here = import.meta.dirname;
@@ -62,6 +63,7 @@ function closePopouts() {
   popouts.clear();
 }
 let semantic: SemanticIndex | null = null;
+const sync = new SyncController((s) => broadcast('sync:status', s));
 let semanticDirty = true;
 let pending: HiveChange[] = [];
 let flushTimer: NodeJS.Timeout | null = null;
@@ -113,6 +115,7 @@ async function openHive(path: string, create = false): Promise<HiveSnapshot> {
   appState.lastHive = root;
   await saveState();
   win?.setTitle(`${hive.name} — Basalt`);
+  void sync.attach(hive);
   return snapshot(hive);
 }
 
@@ -284,6 +287,7 @@ function registerIpc() {
   handle('app:openHive', (path: string, opts?: { create?: boolean }) => openHive(String(path), !!opts?.create));
   handle('app:closeHive', async () => {
     closePopouts();
+    await sync.attach(null);
     await hive?.close();
     hive = null;
     appState.lastHive = null;
@@ -329,6 +333,18 @@ function registerIpc() {
   handle('app:checkForUpdates', () => checkForUpdates());
   handle('app:installUpdate', () => installUpdate());
   handle('app:updateStatus', () => updateStatus());
+
+  handle('sync:status', () => sync.getStatus());
+  handle('sync:setServer', (url: string) => sync.setServer(String(url)));
+  handle('sync:signUp', (email: string, password: string) => sync.signUp(String(email), String(password)));
+  handle('sync:signIn', (email: string, password: string) => sync.signIn(String(email), String(password)));
+  handle('sync:signOut', () => sync.signOut());
+  handle('sync:usage', () => sync.usage());
+  handle('sync:remoteHives', () => sync.remoteHives());
+  handle('sync:connect', (remoteId: string | null) => sync.connect(remoteId ? String(remoteId) : null));
+  handle('sync:disconnect', () => sync.disconnect());
+  handle('sync:setPaused', (paused: boolean) => sync.setPaused(!!paused));
+  handle('sync:now', () => sync.runNow());
 
   handle('hive:snapshot', () => snapshot(requireHive()));
   handle('hive:merge', (a: string, b: string) => requireHive().merge(String(a), String(b)));
@@ -501,7 +517,7 @@ if (app.isPackaged) app.setAsDefaultProtocolClient('basalt');
 
 app.whenReady().then(async () => {
   if (!primary) return;
-  await Promise.all([loadState(), loadAi()]);
+  await Promise.all([loadState(), loadAi(), sync.load()]);
   app.setAboutPanelOptions({ applicationName: 'Basalt', applicationVersion: app.getVersion(), website: 'https://nabhyaraj-sonagara.github.io/Basalt/' });
   session.defaultSession.setSpellCheckerEnabled(false);
 
