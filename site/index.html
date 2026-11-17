@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Basalt — Markdown notes, built for AI</title>
+    <meta name="description" content="Basalt is a local-first Markdown notes app. Your notes stay plain files in a folder, and any AI model or agent you choose can work with them." />
+    <link rel="icon" href="assets/basalt-app-icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <header class="top">
+      <a class="brand" href="./"><img src="assets/basalt-mark.svg" alt="" width="28" height="28" /> Basalt</a>
+      <nav>
+        <a href="#download">Download</a>
+        <a href="https://github.com/Nabhyaraj-Sonagara/Basalt">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <img class="hero-icon" src="assets/basalt-app-icon.svg" alt="" width="96" height="96" />
+        <h1>Markdown notes, built for AI</h1>
+        <p class="lede">Basalt keeps your notes as plain Markdown files in a folder you own. Link them, search them by meaning, and let Claude, ChatGPT, Gemini or a local model work in them with you.</p>
+        <div class="cta" id="download">
+          <a class="btn primary" id="primary" href="https://github.com/Nabhyaraj-Sonagara/Basalt/releases/latest">Download Basalt</a>
+          <p class="meta" id="meta">For macOS, Windows and Linux. Free and open source.</p>
+          <p class="alt" id="alt"></p>
+        </div>
+      </section>
+
+      <figure class="shot">
+        <picture>
+          <source srcset="screenshots/basalt-dark.png" media="(prefers-color-scheme: dark)" />
+          <img src="screenshots/live-preview.png" alt="Basalt's editor with a note open, the file tree on the left and backlinks on the right" width="1360" height="860" />
+        </picture>
+      </figure>
+
+      <section class="features">
+        <div>
+          <h2>Write and link</h2>
+          <p>Live preview that shows Markdown syntax only where your cursor is. <code>[[Links]]</code>, embeds, callouts, tasks, math and diagrams. Rename a note and every link follows.</p>
+        </div>
+        <div>
+          <h2>Find anything</h2>
+          <p>Search with operators or by meaning, related notes, backlinks, tags, properties and table views. The comb view lays your links out on a honeycomb.</p>
+        </div>
+        <div>
+          <h2>Work with AI</h2>
+          <p>An assistant that reads the note you're in and the rest of your hive. A built-in MCP server and CLI let agents search, read and write notes, with no delete tool.</p>
+        </div>
+        <div>
+          <h2>Yours, on disk</h2>
+          <p>A hive is any folder of Markdown files. Open the one you already have. Basalt's own settings live in <code>.basalt/</code>, and nothing leaves your computer unless you choose a cloud model.</p>
+        </div>
+      </section>
+
+      <section class="all" id="all">
+        <h2>All downloads</h2>
+        <ul id="files">
+          <li><a href="https://github.com/Nabhyaraj-Sonagara/Basalt/releases/latest">See the latest release on GitHub</a></li>
+        </ul>
+      </section>
+
+      <section class="first-run">
+        <h2>Opening Basalt the first time</h2>
+        <p>Basalt isn't code-signed yet, so your system asks once before opening it.</p>
+        <dl>
+          <dt>macOS</dt>
+          <dd>Drag Basalt to Applications and open it. When macOS says it can't verify the developer, open <b>System Settings → Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b>.</dd>
+          <dt>Windows</dt>
+          <dd>Run the installer. If SmartScreen appears, click <b>More info → Run anyway</b>.</dd>
+          <dt>Linux</dt>
+          <dd>Install the <code>.deb</code> with <code>sudo apt install ./Basalt-*.deb</code>, or make the AppImage executable with <code>chmod +x Basalt-*.AppImage</code> and run it.</dd>
+        </dl>
+        <p>After that, Basalt updates itself on Windows and Linux. On macOS it tells you when a new version is ready to download.</p>
+      </section>
+    </main>
+
+    <footer>
+      <span>Basalt <span id="version"></span></span>
+      <a href="https://github.com/Nabhyaraj-Sonagara/Basalt">Source</a>
+      <a href="https://github.com/Nabhyaraj-Sonagara/Basalt/releases">Release notes</a>
+      <a href="https://github.com/Nabhyaraj-Sonagara/Basalt/issues">Report an issue</a>
+    </footer>
+    <script src="download.js"></script>
+  </body>
+</html>
