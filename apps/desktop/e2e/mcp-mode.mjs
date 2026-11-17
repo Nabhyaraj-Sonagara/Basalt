@@ -20,8 +20,17 @@ const args = [...(packaged ? [] : [join(root, 'apps/desktop')]), '--mcp', `--hiv
 if (process.platform === 'linux') args.push('--no-sandbox', '--ozone-platform=headless');
 
 const client = new Client({ name: 'basalt-e2e', version: '1.0.0' });
-await client.connect(new StdioClientTransport({ command, args, stderr: 'pipe' }));
-const tools = (await client.listTools()).tools.map((t) => t.name);
+const transport = new StdioClientTransport({ command, args, stderr: 'pipe' });
+let stderr = '';
+transport.stderr?.on('data', (d) => (stderr += d));
+// Show what the app said if it stops early, so a CI failure says why.
+const fail = (err) => {
+  console.error(`FAIL  Basalt --mcp (${command}): ${err?.message ?? err}\n--- app stderr ---\n${stderr || '(nothing)'}\n---`);
+  process.exit(1);
+};
+process.on('unhandledRejection', fail);
+await client.connect(transport).catch(fail);
+const tools = (await client.listTools().catch(fail)).tools.map((t) => t.name);
 assert.ok(tools.includes('search_notes') && tools.includes('create_note'), `tools: ${tools.join(', ')}`);
 const res = await client.callTool({ name: 'search_notes', arguments: { query: 'tag:#start' } });
 assert.match(JSON.stringify(res.content), /Welcome/);

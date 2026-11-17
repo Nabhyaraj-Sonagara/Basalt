@@ -18,6 +18,13 @@ export function startMcpMode(): void {
   app.dock?.hide();
   app.on('window-all-closed', () => {});
 
+  const started = Date.now();
+  process.on('uncaughtException', (err) => {
+    process.stderr.write(`basalt --mcp: ${err.stack ?? err.message}\n`);
+    app.exit(1);
+  });
+  app.on('will-quit', () => process.stderr.write(`basalt --mcp: stopping after ${Date.now() - started} ms\n`));
+
   const arg = process.argv.find((a) => a.startsWith('--hive='))?.slice(7) ?? process.env.BASALT_HIVE;
   void app.whenReady().then(async () => {
     if (!arg) {
@@ -28,7 +35,11 @@ export function startMcpMode(): void {
     try {
       const hive = await Hive.open(resolve(arg));
       await runMcp(hive);
-      process.stdin.on('end', () => app.quit());
+      process.stderr.write(`basalt --mcp: serving ${hive.name} on stdio\n`);
+      process.stdin.on('end', () => {
+        process.stderr.write('basalt --mcp: stdin ended\n');
+        app.quit();
+      });
       process.stdin.on('close', () => app.quit());
     } catch (err) {
       process.stderr.write(`basalt --mcp: ${(err as Error).message}\n`);
