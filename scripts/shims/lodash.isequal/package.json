@@ -1,0 +1,7 @@
+{
+  "name": "lodash.isequal",
+  "version": "4.5.0-basalt.0",
+  "description": "Deep equality via node:util isDeepStrictEqual (replaces the deprecated lodash.isequal).",
+  "main": "index.js",
+  "license": "MIT"
+}

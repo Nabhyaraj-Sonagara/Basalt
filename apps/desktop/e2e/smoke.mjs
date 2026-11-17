@@ -15,7 +15,7 @@ mkdirSync(out, { recursive: true });
 // BASALT_BIN runs an unfused packaged build. Fused builds ignore --inspect; use packaged-check.cjs.
 const bin = process.env.BASALT_BIN;
 const app = await electron.launch({
-  executablePath: bin ?? join(root, 'node_modules/electron/dist/electron'),
+  executablePath: bin ?? createRequire(import.meta.url)('electron'),
   args: [...(bin ? [] : [join(root, 'apps/desktop')]), '--no-sandbox', `--user-data-dir=${userData}`, `--hive=${join(hive, 'Sample')}`],
 });
 const page = await app.firstWindow();
