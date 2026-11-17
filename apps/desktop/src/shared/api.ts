@@ -87,6 +87,26 @@ export interface SyncStatus {
   conflicts: string[];
 }
 
+export type ConnectClientId = 'claude-desktop' | 'claude-code' | 'codex';
+
+export interface ConnectStatus {
+  id: ConnectClientId;
+  label: string;
+  /** The plan the app runs on, e.g. "Claude Pro or Max". */
+  plan: string;
+  installed: boolean;
+  /** The open hive is set up in this app. */
+  connected: boolean;
+}
+
+export interface LocalModels {
+  id: 'ollama' | 'lmstudio';
+  label: string;
+  baseUrl: string;
+  models: string[];
+  embeddingModels: string[];
+}
+
 export interface AppInfo {
   version: string;
   platform: string;
@@ -106,6 +126,10 @@ export interface BasaltApi {
     cliCommand(): Promise<string>;
     initialHive(): Promise<string | null>;
     info(): Promise<AppInfo>;
+    /** Save dialog; writes `text` to the chosen file. Returns the path, or null if cancelled. */
+    saveTextFile(defaultName: string, text: string): Promise<string | null>;
+    /** Open dialog for a text file (for example a theme). Returns its contents, or null if cancelled. */
+    openTextFile(extensions: string[]): Promise<string | null>;
     popout(path: string): Promise<void>;
     setSpellcheck(on: boolean): Promise<void>;
     takePendingUri(): Promise<UriRequest | null>;
@@ -166,6 +190,14 @@ export interface BasaltApi {
     now(): Promise<SyncStatus>;
     onStatus(cb: (s: SyncStatus) => void): () => void;
   };
+  connect: {
+    status(): Promise<ConnectStatus[]>;
+    /** Sets the open hive up in an AI app; resolves with what to do next (e.g. restart the app). */
+    add(id: ConnectClientId): Promise<string>;
+    remove(id: ConnectClientId): Promise<void>;
+    /** The command other MCP clients can use to start Basalt for the open hive. */
+    launchCommand(): Promise<{ command: string; args: string[] }>;
+  };
   ai: {
     presets(): Promise<{ id: string; kind: ProviderKind; label: string; baseUrl?: string; model: string; embeddingModel?: string; needsKey: boolean; local?: boolean }[]>;
     settings(): Promise<AiSettings>;
@@ -174,6 +206,11 @@ export interface BasaltApi {
     setChatProvider(id: string | null): Promise<AiSettings>;
     setEmbeddings(id: string): Promise<AiSettings>;
     listModels(id: string): Promise<string[]>;
+    /** Opens OpenRouter in the browser to approve Basalt, then saves the key it returns. */
+    signInOpenRouter(): Promise<AiSettings>;
+    detectLocal(): Promise<LocalModels[]>;
+    /** Adds a model server found on this computer, with the chosen models. */
+    useLocal(id: 'ollama' | 'lmstudio', model: string, embeddingModel?: string): Promise<AiSettings>;
     chat(req: ChatStart): Promise<void>;
     cancel(id: string): Promise<void>;
     onChat(cb: (e: ChatEvent) => void): () => void;

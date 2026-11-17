@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@basalt/ai": "0.2.0",
+    "@basalt/cli": "0.2.0",
     "@basalt/core": "0.2.0",
     "@basalt/sync": "0.2.0",
     "@basalt/ui": "0.2.0",

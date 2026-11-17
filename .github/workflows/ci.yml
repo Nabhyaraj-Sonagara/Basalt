@@ -59,9 +59,12 @@ jobs:
         run: |
           sudo apt-get update -q && sudo apt-get install -yq xvfb
           xvfb-run -a npm run test:e2e
+          node apps/desktop/e2e/mcp-mode.mjs
       - name: Run the app's end-to-end checks
         if: runner.os != 'Linux'
-        run: npm run test:e2e
+        run: |
+          npm run test:e2e
+          node apps/desktop/e2e/mcp-mode.mjs
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
