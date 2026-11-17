@@ -1,6 +1,6 @@
 {
   "name": "@basalt/cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "bin": {
     "basalt": "dist/basalt.mjs"
@@ -9,8 +9,8 @@
     "build": "node build.mjs"
   },
   "dependencies": {
-    "@basalt/ai": "0.1.0",
-    "@basalt/core": "0.1.0",
+    "@basalt/ai": "0.2.0",
+    "@basalt/core": "0.2.0",
     "@modelcontextprotocol/sdk": "^1.32.2",
     "commander": "^15.1.0",
     "zod": "^4.6.7"

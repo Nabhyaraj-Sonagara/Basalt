@@ -1,6 +1,6 @@
 {
   "name": "@basalt/sync-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Basalt Sync server: stores end-to-end encrypted hives.",
@@ -16,7 +16,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@basalt/sync": "0.1.0",
+    "@basalt/sync": "0.2.0",
     "@types/pg": "^8.23.1"
   }
 }
