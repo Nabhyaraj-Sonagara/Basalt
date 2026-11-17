@@ -388,3 +388,13 @@ mark { background: var(--pollen); color: var(--on-honey); border-radius: var(--r
 .toggle-label.disabled { opacity: .6; cursor: default; }
 
 .result-line.clamp { padding-left: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; white-space: normal; }
+
+/* Sync */
+.sync-form { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4) var(--space-4); }
+.sync-form label { display: grid; gap: var(--space-1); font: var(--type-label); color: var(--ink-muted); }
+.sync-form .setting-input { width: 100%; }
+.sync-actions { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.sync-conflicts { display: grid; gap: var(--space-1); justify-items: end; }
+.sync-conflicts .plain { color: var(--link); text-decoration: underline; }
+.status-btn.sync-idle { color: var(--moss); }
+.status-btn.sync-error { color: var(--ember); }

@@ -9,6 +9,7 @@ import { PromptDialog, RecoveryDialog } from './components/Dialogs';
 import { HoverLayer } from './components/HoverLayer';
 import { Toasts } from './components/Toasts';
 import { StartScreen } from './components/StartScreen';
+import { SYNC_TEXT, useSyncStatus } from './components/SyncSettings';
 import { api, go, handleChanges, handleUri, makeTab, openHive, scheduleWorkspaceSave } from './lib/actions';
 import { commandById, runHotkey } from './lib/commands';
 import { activeTab, applySnapshot, setMode, getState, setState, toast, useStore } from './lib/store-all';
@@ -45,8 +46,19 @@ function StatusBar() {
           </button>
         </>
       ) : null}
-      <span className="status-ok">✓ Saved to disk</span>
+      <SyncIndicator />
     </footer>
+  );
+}
+
+function SyncIndicator() {
+  const s = useSyncStatus();
+  if (!s?.linked) return <span className="status-ok">✓ Saved to disk</span>;
+  const label = s.state === 'idle' ? '✓ Synced' : s.state === 'offline' ? 'Offline' : SYNC_TEXT[s.state];
+  return (
+    <button className={`status-btn sync-${s.state}`} title={s.error ?? SYNC_TEXT[s.state]} onClick={() => setState({ settingsOpen: 'sync' })}>
+      {label}
+    </button>
   );
 }
 

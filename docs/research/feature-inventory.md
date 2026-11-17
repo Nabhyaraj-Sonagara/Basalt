@@ -99,7 +99,7 @@ Status codes: **M1** = built in this milestone · **M2** = next milestone · **L
 | Web viewer | | L |
 | Format converter (import from other apps) | Importers | L |
 | Publish | Static site export (`basalt export`) | M2 |
-| Sync | Git or folder sync adapters; end-to-end encrypted service later | L |
+| Sync | End-to-end encrypted sync service (self-hosted server, Postgres + disk/S3); conflict copies; per-device state | M1 |
 
 ### Extensibility
 | Capability | Basalt | Status |
