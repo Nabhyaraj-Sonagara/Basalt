@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { CommandPalette, type PaletteItem } from '@basalt/ui';
 import { applyTemplate, fuzzyFilter } from '@basalt/core/browser';
 import { COMMANDS, formatHotkey, hotkeyFor } from '../lib/commands';
-import { api, createNote, errorToast, openPath, renamePath } from '../lib/actions';
+import { api, createNote, errorToast, mergeNotes, openPath, renamePath } from '../lib/actions';
 import { activeTab, getState, noteTitle, setState, useStore } from '../lib/store';
 import { editorFor } from './Editor';
 import { addNoteToCanvas } from './CanvasView';
@@ -113,6 +113,16 @@ export function Palette() {
         },
       }));
     }
+    if (palette.mode === 'merge') {
+      const source = palette.payload!;
+      const pool = notes.filter((n) => n.path !== source);
+      return fuzzyFilter(query, query.trim() ? pool : [...pool].sort((a, b) => b.mtime - a.mtime), (n) => [n.title, n.path], 40).map(({ item }) => ({
+        icon: 'note',
+        label: item.title,
+        hint: item.path.includes('/') ? item.path.slice(0, item.path.lastIndexOf('/')) : undefined,
+        run: () => void mergeNotes(source, item.path),
+      }));
+    }
     // move
     const from = palette.payload!;
     const folders = ['', ...files.filter((f) => f.kind === 'folder').map((f) => f.path)];
@@ -129,7 +139,7 @@ export function Palette() {
 
   if (!palette) return null;
   const placeholder =
-    palette.mode === 'commands' ? 'Type a command' : palette.mode === 'files' ? (palette.payload ? 'Pick a note to add to the canvas' : 'Find or create a note') : palette.mode === 'templates' ? 'Pick a template' : `Move ${noteTitle(palette.payload!)} to…`;
+    palette.mode === 'commands' ? 'Type a command' : palette.mode === 'files' ? (palette.payload ? 'Pick a note to add to the canvas' : 'Find or create a note') : palette.mode === 'templates' ? 'Pick a template' : palette.mode === 'merge' ? `Merge ${noteTitle(palette.payload!)} into…` : `Move ${noteTitle(palette.payload!)} to…`;
   const clamped = Math.min(index, Math.max(0, rows.length - 1));
   const choose = (i: number, newTab = false) => {
     const row = rows[i];

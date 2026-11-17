@@ -16,6 +16,9 @@ Basalt is a local-first Markdown notes app built so AI can work with your notes 
 - Callouts, tasks, `==highlights==`, `%%comments%%`, footnotes, KaTeX math, Mermaid diagrams and highlighted code.
 - Backlinks with unlinked mentions you can link in one click. Hover a link to preview the note.
 - Renaming or moving a note rewrites every link to it, including links inside canvases.
+- Type `/` to insert headings, tasks, callouts, tables, code and math blocks, links, embeds, templates or today's date.
+- Merge a note into another (links follow it), or extract a selection into a new linked note.
+- Spellcheck with suggestions on right-click, and optional Vim key bindings.
 
 **Finding and organising**
 - Search with operators: `file:`, `path:`, `tag:`, `line:()`, `section:()`, `task-todo:`, `[property:value]`, `[rating:>3]`, `/regex/`, `OR` and `-exclude`.
@@ -24,7 +27,8 @@ Basalt is a local-first Markdown notes app built so AI can work with your notes 
 - **Comb view**: your link graph laid out on a honeycomb. The local comb puts the open note in the middle with linked notes in rings around it; the global comb clusters the whole hive.
 - Canvas boards in the open JSON Canvas format.
 - Daily notes, templates, unique notes and file recovery snapshots.
-- Tabs and split panes, a command palette and quick switcher, rebindable hotkeys, Comb (light) and Basalt (dark) themes, and CSS snippets.
+- Tabs, split panes and pop-out windows, a command palette and quick switcher, rebindable hotkeys, Comb (light) and Basalt (dark) themes, and CSS snippets.
+- `basalt://` links open a note from anywhere: `basalt://open?hive=Notes&file=Plan`, plus `new`, `daily` and `search`. **Copy Basalt link** in the command palette makes one for the open note.
 
 **Built for AI**
 - **Assistant** that answers using your current note, your selection, or relevant notes from across the hive, and links the notes it used. It works with Claude, OpenAI, Gemini, and any OpenAI-compatible endpoint, including **local models** in Ollama or LM Studio. API keys stay in your system keychain.

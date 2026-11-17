@@ -16,11 +16,15 @@ mkdirSync(out, { recursive: true });
 const read = (p) => readFileSync(join(hive, p), 'utf8');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const app = await electron.launch({
-  executablePath: join(root, 'node_modules/electron/dist/electron'),
-  args: [join(root, 'apps/desktop'), '--no-sandbox', `--user-data-dir=${mkdtempSync(join(tmpdir(), 'basalt-ud-'))}`, `--hive=${hive}`],
-});
-const page = await app.firstWindow();
+const userData = mkdtempSync(join(tmpdir(), 'basalt-ud-'));
+const launch = (extra) =>
+  electron.launch({
+    executablePath: join(root, 'node_modules/electron/dist/electron'),
+    args: [join(root, 'apps/desktop'), '--no-sandbox', `--user-data-dir=${userData}`, ...extra],
+    env: { ...process.env, BASALT_NO_UPDATES: '1' },
+  });
+let app = await launch([`--hive=${hive}`]);
+let page = await app.firstWindow();
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
@@ -170,11 +174,102 @@ await step('settings and assistant setup', async () => {
   await page.keyboard.press('Escape');
 });
 
+const palette = async (command) => {
+  await page.keyboard.press('Control+P');
+  await page.keyboard.type(command);
+  await page.waitForSelector('.palette-wrap li[role="option"]');
+  await page.keyboard.press('Enter');
+};
+
+await step('slash commands insert a heading', async () => {
+  await page.keyboard.press('Control+N');
+  await page.waitForFunction(() => document.activeElement?.classList.contains('note-title'));
+  await page.keyboard.type('Slash test');
+  await page.keyboard.press('Enter');
+  await sleep(500);
+  await page.keyboard.type('/heading 2');
+  await page.waitForSelector('.cm-tooltip-autocomplete li:has-text("Heading 2")');
+  await shot('12-slash-commands');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Plan');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('This line moves out');
+  await sleep(800);
+  assert.match(read('Slash test.md'), /^## Plan\nThis line moves out/m);
+});
+
+await step('extract selection to a new note leaves a link', async () => {
+  await page.keyboard.press('Shift+Home');
+  await palette('extract selection');
+  await page.waitForSelector('.dialog-field input');
+  await page.fill('.dialog-field input', 'Moved idea');
+  await page.keyboard.press('Enter');
+  await sleep(900);
+  assert.equal(read('Moved idea.md').trim(), 'This line moves out');
+  assert.match(read('Slash test.md'), /^\[\[Moved idea\]\]$/m);
+});
+
+await step('copy a basalt:// link to the note', async () => {
+  await palette('copy basalt link');
+  await sleep(300);
+  const text = await app.evaluate(({ clipboard }) => clipboard.readText());
+  assert.equal(text, 'basalt://open?hive=Sample&file=Slash%20test.md');
+});
+
+await step('open a note in a pop-out window', async () => {
+  const popupPromise = app.waitForEvent('window');
+  await palette('open this note in a new window');
+  const popup = await popupPromise;
+  await popup.waitForSelector('.workspace.no-left.no-right .cm-content', { timeout: 10000 });
+  assert.equal(await popup.inputValue('.note-title'), 'Slash test');
+  await popup.screenshot({ path: join(out, '13-pop-out-window.png') });
+  await popup.close();
+});
+
+await step('merge a note into another and repoint links', async () => {
+  await page.keyboard.press('Control+O');
+  await page.keyboard.type('Ada');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelector('.note-title')?.value === 'Ada');
+  await palette('merge this note');
+  await page.keyboard.type('Linking notes');
+  await sleep(200);
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelector('.note-title')?.value === 'Linking notes', null, { timeout: 5000 });
+  await sleep(800);
+  assert.ok(!existsSync(join(hive, 'People/Ada.md')), 'Ada moved to the trash');
+  assert.match(read('Linking notes.md'), /^## Ada$/m);
+  const daily = read('Daily/2026-11-15.md');
+  assert.ok(!daily.includes('People/Ada'), daily);
+  assert.match(daily, /\[\[Linking notes\]\]/);
+});
+
+await step('spellcheck setting turns on the spellchecker; about page shows the version', async () => {
+  assert.equal(await app.evaluate(({ session }) => session.defaultSession.isSpellCheckerEnabled()), false);
+  await page.keyboard.press('Control+,');
+  await page.waitForSelector('.settings');
+  await page.locator('.bs-setting', { hasText: 'Spellcheck' }).locator('[role=switch]').click();
+  await sleep(500);
+  assert.equal(await app.evaluate(({ session }) => session.defaultSession.isSpellCheckerEnabled()), true);
+  await page.locator('.settings-nav button:text("About and updates")').click();
+  await page.waitForSelector('.bs-setting-label:text("Version 0.1.0")');
+  await page.keyboard.press('Escape');
+});
+
 await step('no renderer errors', async () => {
   assert.deepEqual(errors, []);
 });
 
 await app.close();
+
+// A basalt:// link at launch opens the note in the last hive (packaged builds get links this way on Windows and Linux).
+await step('a basalt:// link opens a note', async () => {
+  app = await launch(['basalt://open?hive=Sample&file=Linking%20notes']);
+  page = await app.firstWindow();
+  await page.waitForFunction(() => document.querySelector('.note-title')?.value === 'Linking notes', null, { timeout: 20000 });
+  await app.close();
+});
+
 for (const r of results) console.log(r.join('  '));
 const failed = results.filter((r) => r[0] === 'FAIL').length;
 console.log(`\n${results.length - failed}/${results.length} checks passed. Screenshots: ${out}`);

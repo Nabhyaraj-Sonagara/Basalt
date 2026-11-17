@@ -9,9 +9,10 @@ import { PromptDialog, RecoveryDialog } from './components/Dialogs';
 import { HoverLayer } from './components/HoverLayer';
 import { Toasts } from './components/Toasts';
 import { StartScreen } from './components/StartScreen';
-import { api, go, handleChanges, openHive, scheduleWorkspaceSave } from './lib/actions';
-import { runHotkey } from './lib/commands';
-import { activeTab, setMode, getState, setState, useStore } from './lib/store-all';
+import { api, go, handleChanges, handleUri, makeTab, openHive, scheduleWorkspaceSave } from './lib/actions';
+import { commandById, runHotkey } from './lib/commands';
+import { activeTab, applySnapshot, setMode, getState, setState, toast, useStore } from './lib/store-all';
+import type { UpdateStatus } from '../shared/api';
 
 function StatusBar() {
   const tab = useStore((s) => activeTab(s));
@@ -53,6 +54,7 @@ function Workspace() {
   const panes = useStore((s) => s.panes);
   const leftOpen = useStore((s) => s.leftOpen);
   const rightOpen = useStore((s) => s.rightOpen);
+  const popout = useStore((s) => !!s.popout);
   useEffect(() => scheduleWorkspaceSave(), [leftOpen, rightOpen]);
   return (
     <div className={`workspace${leftOpen ? '' : ' no-left'}${rightOpen ? '' : ' no-right'}`}>
@@ -63,7 +65,7 @@ function Workspace() {
         ))}
       </main>
       {rightOpen ? <RightPanel /> : null}
-      <div className="edge-toggles">
+      <div className="edge-toggles" hidden={popout}>
         <Button size="sm" variant="quiet" icon="folder" aria-label={leftOpen ? 'Hide left sidebar' : 'Show left sidebar'} onClick={() => setState((s) => ({ leftOpen: !s.leftOpen }))} />
         <Button size="sm" variant="quiet" icon="backlinks" aria-label={rightOpen ? 'Hide right sidebar' : 'Show right sidebar'} onClick={() => setState((s) => ({ rightOpen: !s.rightOpen }))} />
       </div>
@@ -82,19 +84,46 @@ function Snippets() {
   return css ? <style data-snippets>{css}</style> : null;
 }
 
+let announced = '';
+function announceUpdate(s: UpdateStatus) {
+  if (getState().popout || !s.latest || announced === s.state + s.latest) return;
+  if (s.state === 'ready') {
+    announced = s.state + s.latest;
+    toast({ tone: 'neutral', title: `Basalt ${s.latest} is ready`, body: 'It installs when you quit, or restart now.', action: { label: 'Restart', onClick: () => void api().app.installUpdate() } }, 0);
+  } else if (s.state === 'available') {
+    announced = s.state + s.latest;
+    toast({ tone: 'neutral', title: `Basalt ${s.latest} is available`, action: { label: 'Download', onClick: () => void api().app.installUpdate() } }, 0);
+  }
+}
+
 export function App() {
   const hasHive = useStore((s) => !!s.hive);
+  const spellcheck = useStore((s) => !!s.hive?.info.settings.editor.spellcheck);
+  useEffect(() => void api().app.setSpellcheck(spellcheck), [spellcheck]);
   const [booting, setBooting] = useState(true);
 
   useEffect(() => {
     document.documentElement.dataset.theme = getState().theme;
     void api()
-      .app.initialHive()
-      .then(async (p) => {
+      .app.info()
+      .then(async (info) => {
+        if (info.popout) {
+          // A pop-out window shows one note from the hive the main window has open.
+          applySnapshot(await api().hive.snapshot());
+          const tab = makeTab(info.popout);
+          setState({ popout: info.popout, panes: [{ id: 'p1', tabs: [tab], active: tab.id }], activePane: 'p1', leftOpen: false, rightOpen: false });
+          return;
+        }
+        const p = await api().app.initialHive();
         if (p) await openHive(p);
+        const pending = await api().app.takePendingUri();
+        if (pending) await handleUri(pending);
       })
       .finally(() => setBooting(false));
     const off = api().hive.onChange(handleChanges);
+    const offUri = api().app.onUri((u) => void handleUri(u));
+    const offCommand = api().app.onCommand((id) => void commandById(id)?.run());
+    const offUpdate = api().app.onUpdate(announceUpdate);
     const onKey = (e: KeyboardEvent) => {
       if (getState().palette || getState().prompt) return;
       runHotkey(e);
@@ -110,6 +139,9 @@ export function App() {
     window.addEventListener('mouseup', onMouse);
     return () => {
       off();
+      offUri();
+      offCommand();
+      offUpdate();
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('mouseup', onMouse);
     };

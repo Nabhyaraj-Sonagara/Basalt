@@ -49,6 +49,35 @@ export interface ChatStart {
 
 export type ChatEvent = { id: string; type: 'delta'; text: string } | { id: string; type: 'done'; sources: string[] } | { id: string; type: 'error'; message: string };
 
+export interface UpdateStatus {
+  state: 'idle' | 'checking' | 'current' | 'available' | 'downloading' | 'ready' | 'error' | 'unsupported';
+  /** The running version. */
+  version: string;
+  latest?: string;
+  percent?: number;
+  /** Set when the update has to be downloaded by hand (unsigned macOS builds). */
+  downloadUrl?: string;
+  error?: string;
+}
+
+/** A basalt:// link, with its hive resolved to a folder the user has opened before. */
+export interface UriRequest {
+  action: 'open' | 'new' | 'daily' | 'search';
+  hivePath: string | null;
+  file?: string;
+  name?: string;
+  content?: string;
+  query?: string;
+  error?: string;
+}
+
+export interface AppInfo {
+  version: string;
+  platform: string;
+  /** Set in a pop-out window: the note it shows. */
+  popout: string | null;
+}
+
 export interface BasaltApi {
   app: {
     recent(): Promise<{ path: string; name: string; opened: number }[]>;
@@ -60,6 +89,17 @@ export interface BasaltApi {
     showInFolder(path: string): Promise<void>;
     cliCommand(): Promise<string>;
     initialHive(): Promise<string | null>;
+    info(): Promise<AppInfo>;
+    popout(path: string): Promise<void>;
+    setSpellcheck(on: boolean): Promise<void>;
+    takePendingUri(): Promise<UriRequest | null>;
+    onUri(cb: (u: UriRequest) => void): () => void;
+    /** Menu bar and context-menu commands, by command id. */
+    onCommand(cb: (id: string) => void): () => void;
+    checkForUpdates(): Promise<UpdateStatus>;
+    installUpdate(): Promise<void>;
+    updateStatus(): Promise<UpdateStatus>;
+    onUpdate(cb: (s: UpdateStatus) => void): () => void;
   };
   hive: {
     snapshot(): Promise<HiveSnapshot>;
@@ -69,6 +109,7 @@ export interface BasaltApi {
     create(path: string, text?: string, template?: string): Promise<string>;
     createFolder(path: string): Promise<string>;
     rename(from: string, to: string): Promise<{ path: string; updated: string[] }>;
+    merge(source: string, target: string): Promise<{ path: string; updated: string[] }>;
     trash(path: string): Promise<void>;
     toggleTask(path: string, line: number): Promise<boolean | null>;
     setProperties(path: string, changes: Record<string, unknown>): Promise<void>;
