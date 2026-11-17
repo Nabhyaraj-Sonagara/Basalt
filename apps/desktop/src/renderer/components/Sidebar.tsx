@@ -1,5 +1,5 @@
 import { LabeledToggle } from './LabeledToggle';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type JSX } from 'react';
 import { Button, HexAvatar, Icon, SearchField, Tag, TreeItem, EmptyState, type IconName } from '@basalt/ui';
 import { dirOf, isNote, type SearchResult, type TreeNode } from '@basalt/core/browser';
 import type { SemanticHit } from '@basalt/ai/types-only';

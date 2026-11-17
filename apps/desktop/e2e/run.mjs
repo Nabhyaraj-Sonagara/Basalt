@@ -19,7 +19,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const userData = mkdtempSync(join(tmpdir(), 'basalt-ud-'));
 const launch = (extra) =>
   electron.launch({
-    executablePath: join(root, 'node_modules/electron/dist/electron'),
+    executablePath: createRequire(import.meta.url)('electron'),
     args: [join(root, 'apps/desktop'), '--no-sandbox', `--user-data-dir=${userData}`, ...extra],
     env: { ...process.env, BASALT_NO_UPDATES: '1' },
   });

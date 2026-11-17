@@ -1,0 +1,7 @@
+{
+  "name": "rimraf",
+  "version": "2.6.3-basalt.0",
+  "description": "rimraf v2 API (callback + sync) on top of fs.rm, replacing the unsupported rimraf@2.",
+  "main": "index.js",
+  "license": "ISC"
+}

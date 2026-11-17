@@ -22,13 +22,27 @@
     "prebuild": "node scripts/check-setup.mjs"
   },
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": ">=22.12.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
     "esbuild": "^0.28.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "lodash.isequal": "file:scripts/shims/lodash.isequal",
+    "rimraf": "file:scripts/shims/rimraf-v2"
+  },
+  "overrides": {
+    "@electron/asar": "^4.3.2",
+    "@electron/get": "^5.1.0",
+    "@electron/universal": "^3.0.6",
+    "app-builder-lib": {
+      "minimatch": "^11.0.9"
+    },
+    "temp": {
+      "rimraf": "$rimraf"
+    },
+    "lodash.isequal": "$lodash.isequal"
   }
 }

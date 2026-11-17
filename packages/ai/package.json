@@ -7,7 +7,7 @@
     "./types-only": "./src/types-only.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^1.8.0",
+    "@anthropic-ai/sdk": "^1.9.0",
     "@basalt/core": "0.1.0"
   }
 }

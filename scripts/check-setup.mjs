@@ -8,10 +8,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const problems = [];
 
 const [major, minor] = process.versions.node.split('.').map(Number);
-const nodeOk = (major === 20 && minor >= 19) || (major === 22 && minor >= 12) || major > 22;
+const nodeOk = (major === 22 && minor >= 12) || major > 22;
 if (!nodeOk) {
   problems.push(
-    `Basalt needs Node 20.19+ or 22.12+ (you have ${process.versions.node}).\n` +
+    `Basalt needs Node 22.12 or newer (you have ${process.versions.node}).\n` +
       '    Install Node 22 LTS, e.g. `nvm install 22 && nvm use 22` or `brew install node@22`,\n' +
       '    then run `npm install` again from the repository root.',
   );
