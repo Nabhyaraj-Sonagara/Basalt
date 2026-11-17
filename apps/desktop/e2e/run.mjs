@@ -273,6 +273,25 @@ await step('a basalt:// link opens a note', async () => {
   await app.close();
 });
 
+// First launch: a fresh profile with no hive shows the start screen, and the sample hive opens.
+await step('first launch shows the start screen and opens the sample hive', async () => {
+  const fresh = mkdtempSync(join(tmpdir(), 'basalt-ud-fresh-'));
+  app = await electron.launch({
+    executablePath: createRequire(import.meta.url)('electron'),
+    args: [join(root, 'apps/desktop'), '--no-sandbox', `--user-data-dir=${fresh}`],
+    env: { ...process.env, BASALT_NO_UPDATES: '1', BASALT_DOCUMENTS_DIR: mkdtempSync(join(tmpdir(), 'basalt-docs-')) },
+  });
+  page = await app.firstWindow();
+  const firstErrors = [];
+  page.on('pageerror', (e) => firstErrors.push(String(e)));
+  await page.getByText('Open a hive').waitFor({ timeout: 20000 });
+  await page.screenshot({ path: join(out, '00-start-screen.png') });
+  await page.getByRole('button', { name: 'Try the sample hive' }).click();
+  await page.waitForSelector('.workspace .cm-content', { timeout: 20000 });
+  assert.deepEqual(firstErrors, []);
+  await app.close();
+});
+
 for (const r of results) console.log(r.join('  '));
 const failed = results.filter((r) => r[0] === 'FAIL').length;
 console.log(`\n${results.length - failed}/${results.length} checks passed. Screenshots: ${out}`);
