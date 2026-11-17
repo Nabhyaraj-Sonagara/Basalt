@@ -14,6 +14,10 @@
     "tokens": "node scripts/build-tokens.mjs",
     "dev": "npm run tokens && npm run dev -w @basalt/desktop",
     "build": "npm run tokens && npm run build -w @basalt/cli && npm run build -w @basalt/desktop",
+    "package": "npm run tokens && npm run build -w @basalt/cli && npm run package -w @basalt/desktop",
+    "release": "node scripts/release.mjs",
+    "icons": "node scripts/build-icons.mjs",
+    "site": "node scripts/build-tokens.mjs && node scripts/build-site.mjs",
     "test": "vitest run",
     "test:e2e": "npm run build -w @basalt/desktop && node apps/desktop/e2e/run.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -27,11 +31,12 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "esbuild": "^0.28.2",
+    "lodash.isequal": "file:scripts/shims/lodash.isequal",
+    "playwright": "^1.65.1",
+    "rimraf": "file:scripts/shims/rimraf-v2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^5.1.0",
-    "lodash.isequal": "file:scripts/shims/lodash.isequal",
-    "rimraf": "file:scripts/shims/rimraf-v2"
+    "vitest": "^5.1.0"
   },
   "overrides": {
     "@electron/asar": "^4.3.2",

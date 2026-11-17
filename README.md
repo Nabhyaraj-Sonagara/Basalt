@@ -92,7 +92,7 @@ npm run build
 Package an installable app for the platform you're on (output in `apps/desktop/release/`):
 
 ```bash
-npm run package -w @basalt/desktop
+npm run package
 ```
 
 ### Troubleshooting
@@ -144,6 +144,8 @@ In the app, **Settings → Agents and CLI** shows these commands already filled 
 | `design-system/` | The Basalt design system |
 | `fixtures/sample-hive` | A sample hive, used by the tests and offered on the start screen |
 | `docs/` | Feature inventory, format notes and the security audit |
+| `site/` | The download page (GitHub Pages) |
+| `.github/workflows/` | CI, releases and the download page |
 
 ## Testing
 
@@ -160,6 +162,32 @@ End-to-end, against the real Electron app on a copy of the sample hive. On Linux
 ```bash
 npm run test:e2e
 ```
+
+## Releasing
+
+Every push runs CI: typecheck, unit tests, the end-to-end checks on Linux and macOS, and installer builds for macOS, Windows and Linux. Each run's installers are kept as downloadable artifacts for a week.
+
+To publish a release, set the version and tag it:
+
+```bash
+npm run release -- 0.2.0
+```
+
+```bash
+git push && git push origin v0.2.0
+```
+
+The **Release** workflow builds the installers, uploads them to a GitHub Release and publishes it. Installed copies of Basalt find the update from there, and the [download page](https://nabhyaraj-sonagara.github.io/Basalt/) links to it. The page is deployed by the **Download site** workflow; turn it on once under **Settings → Pages → Source: GitHub Actions**.
+
+**Code signing** switches on by itself once you add these repository secrets:
+
+| Secret | For |
+|---|---|
+| `MAC_CERTIFICATE_P12_BASE64`, `MAC_CERTIFICATE_PASSWORD` | A Developer ID Application certificate (base64 of the .p12) |
+| `APPLE_API_KEY_P8_BASE64`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER` | Notarization with an App Store Connect API key |
+| `WIN_CERTIFICATE_P12_BASE64`, `WIN_CERTIFICATE_PASSWORD` | A Windows code-signing certificate |
+
+Without them, macOS builds are ad-hoc signed (users approve the first launch once) and can't install updates themselves; they offer a download instead. Windows builds are unsigned.
 
 ## Security
 

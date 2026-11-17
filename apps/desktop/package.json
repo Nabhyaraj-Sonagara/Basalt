@@ -10,7 +10,8 @@
     "dev": "electron-vite dev",
     "prebuild": "node ../../scripts/check-setup.mjs",
     "build": "electron-vite build",
-    "package": "electron-vite build && electron-builder --linux dir"
+    "package": "electron-vite build && electron-builder --publish never",
+    "prepackage": "node ../../scripts/check-setup.mjs"
   },
   "dependencies": {
     "@basalt/ai": "0.1.0",
@@ -43,5 +44,14 @@
     "electron-vite": "^6.0.0",
     "vite": "^8.3.8"
   },
-  "author": "Basalt"
+  "author": {
+    "name": "Basalt",
+    "email": "noreply@github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Nabhyaraj-Sonagara/Basalt.git"
+  },
+  "homepage": "https://nabhyaraj-sonagara.github.io/Basalt/",
+  "desktopName": "basalt.desktop"
 }

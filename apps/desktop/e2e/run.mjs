@@ -15,6 +15,8 @@ const out = process.argv[2] ?? join(root, 'apps/desktop/e2e/screenshots');
 mkdirSync(out, { recursive: true });
 const read = (p) => readFileSync(join(hive, p), 'utf8');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Basalt's Mod key is Cmd on macOS and Ctrl elsewhere.
+const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
 
 const userData = mkdtempSync(join(tmpdir(), 'basalt-ud-'));
 const launch = (extra) =>
@@ -54,14 +56,14 @@ await step('opens the hive on Welcome in live preview', async () => {
 });
 
 await step('reading view renders callouts, tasks, tags and highlights', async () => {
-  await page.keyboard.press('Control+E');
+  await page.keyboard.press(`${mod}+E`);
   await page.waitForSelector('.reading');
   assert.ok(await page.locator('.reading .bs-callout-tip').isVisible());
   assert.equal(await page.locator('.reading li.task-item').count(), 3);
   assert.ok(await page.locator('.reading mark').count());
   assert.ok(!(await page.locator('.reading').innerText()).includes('comments stay hidden'));
   await shot('02-reading-view');
-  await page.keyboard.press('Control+E');
+  await page.keyboard.press(`${mod}+E`);
   await page.waitForSelector('.cm-content');
 });
 
@@ -72,7 +74,7 @@ await step('toggles a task from live preview and saves to disk', async () => {
 });
 
 await step('quick switcher opens a note by fuzzy name', async () => {
-  await page.keyboard.press('Control+O');
+  await page.keyboard.press(`${mod}+O`);
   await page.keyboard.type('lnk nts');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => document.querySelector('.note-title')?.value === 'Linking notes');
@@ -81,7 +83,7 @@ await step('quick switcher opens a note by fuzzy name', async () => {
 });
 
 await step('creates a note, links with autocomplete, and the backlink appears', async () => {
-  await page.keyboard.press('Control+N');
+  await page.keyboard.press(`${mod}+N`);
   await page.waitForFunction(() => document.activeElement?.classList.contains('note-title'));
   await page.keyboard.type('Field notes');
   await page.keyboard.press('Enter');
@@ -94,7 +96,7 @@ await step('creates a note, links with autocomplete, and the backlink appears', 
   await sleep(900);
   assert.ok(existsSync(join(hive, 'Field notes.md')), 'renamed from Untitled to Field notes');
   assert.match(read('Field notes.md'), /See \[\[Basalt launch\]\] and #idea\/new/);
-  await page.keyboard.press('Control+O');
+  await page.keyboard.press(`${mod}+O`);
   await page.keyboard.type('Basalt launch');
   await page.keyboard.press('Enter');
   await page.waitForSelector('.back-card b:text("Field notes")', { timeout: 5000 });
@@ -110,7 +112,7 @@ await step('renaming a note rewrites links to it', async () => {
 });
 
 await step('search with operators', async () => {
-  await page.keyboard.press('Control+Shift+F');
+  await page.keyboard.press(`${mod}+Shift+F`);
   await page.keyboard.type('task-todo:engine');
   await page.waitForSelector('.result-title:text("Launch plan")', { timeout: 5000 });
   await shot('05-search');
@@ -123,7 +125,7 @@ await step('semantic search finds by meaning', async () => {
 });
 
 await step('command palette runs commands; comb view lays out the hive', async () => {
-  await page.keyboard.press('Control+P');
+  await page.keyboard.press(`${mod}+P`);
   await page.keyboard.type('comb view');
   await shot('06-command-palette');
   await page.keyboard.press('Enter');
@@ -133,7 +135,7 @@ await step('command palette runs commands; comb view lays out the hive', async (
 });
 
 await step('canvas renders cards and edges', async () => {
-  await page.keyboard.press('Control+O');
+  await page.keyboard.press(`${mod}+O`);
   await page.keyboard.type('Canvas map');
   await page.keyboard.press('Enter');
   await page.waitForSelector('.canvas-node');
@@ -144,15 +146,15 @@ await step('canvas renders cards and edges', async () => {
 });
 
 await step('daily note from the command palette', async () => {
-  await page.keyboard.press('Control+Shift+D');
+  await page.keyboard.press(`${mod}+Shift+D`);
   await page.waitForFunction(() => /^\d{4}-\d{2}-\d{2}$/.test(document.querySelector('.note-title')?.value ?? ''));
 });
 
 await step('dark Basalt theme', async () => {
-  await page.keyboard.press('Control+O');
+  await page.keyboard.press(`${mod}+O`);
   await page.keyboard.type('Welcome');
   await page.keyboard.press('Enter');
-  await page.keyboard.press('Control+P');
+  await page.keyboard.press(`${mod}+P`);
   await page.keyboard.type('switch light and dark');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => document.documentElement.dataset.theme === 'basalt');
@@ -162,7 +164,7 @@ await step('dark Basalt theme', async () => {
 });
 
 await step('settings and assistant setup', async () => {
-  await page.keyboard.press('Control+,');
+  await page.keyboard.press(`${mod}+,`);
   await page.waitForSelector('.settings');
   await page.locator('.settings-nav button:text("Assistant")').click();
   await page.waitForSelector('.settings-body .bs-settings');
@@ -175,14 +177,14 @@ await step('settings and assistant setup', async () => {
 });
 
 const palette = async (command) => {
-  await page.keyboard.press('Control+P');
+  await page.keyboard.press(`${mod}+P`);
   await page.keyboard.type(command);
   await page.waitForSelector('.palette-wrap li[role="option"]');
   await page.keyboard.press('Enter');
 };
 
 await step('slash commands insert a heading', async () => {
-  await page.keyboard.press('Control+N');
+  await page.keyboard.press(`${mod}+N`);
   await page.waitForFunction(() => document.activeElement?.classList.contains('note-title'));
   await page.keyboard.type('Slash test');
   await page.keyboard.press('Enter');
@@ -217,7 +219,8 @@ await step('copy a basalt:// link to the note', async () => {
 });
 
 await step('open a note in a pop-out window', async () => {
-  const popupPromise = app.waitForEvent('window');
+  const popupPromise = app.waitForEvent('window', { timeout: 15000 });
+  popupPromise.catch(() => {});
   await palette('open this note in a new window');
   const popup = await popupPromise;
   await popup.waitForSelector('.workspace.no-left.no-right .cm-content', { timeout: 10000 });
@@ -227,7 +230,7 @@ await step('open a note in a pop-out window', async () => {
 });
 
 await step('merge a note into another and repoint links', async () => {
-  await page.keyboard.press('Control+O');
+  await page.keyboard.press(`${mod}+O`);
   await page.keyboard.type('Ada');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => document.querySelector('.note-title')?.value === 'Ada');
@@ -246,7 +249,7 @@ await step('merge a note into another and repoint links', async () => {
 
 await step('spellcheck setting turns on the spellchecker; about page shows the version', async () => {
   assert.equal(await app.evaluate(({ session }) => session.defaultSession.isSpellCheckerEnabled()), false);
-  await page.keyboard.press('Control+,');
+  await page.keyboard.press(`${mod}+,`);
   await page.waitForSelector('.settings');
   await page.locator('.bs-setting', { hasText: 'Spellcheck' }).locator('[role=switch]').click();
   await sleep(500);

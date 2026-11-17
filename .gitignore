@@ -10,3 +10,4 @@ fixtures/**/.basalt/snapshots/
 fixtures/**/.basalt/trash/
 fixtures/**/.basalt/workspace.json
 apps/desktop/e2e/screenshots/
+site-dist/

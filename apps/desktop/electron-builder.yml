@@ -1,7 +1,9 @@
 appId: md.basalt.app
 productName: Basalt
+copyright: Copyright © 2026 Basalt
 directories:
   output: release
+  buildResources: build
 files:
   - out/**
   - package.json
@@ -13,15 +15,63 @@ extraResources:
     to: cli/basalt.mjs
 asar: true
 executableName: basalt
-linux:
-  target: [dir, AppImage]
-  category: Office
-  icon: ../../design-system/project/assets/Logos/basalt-app-icon.svg
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+electronVersion: 45.3.3
+protocols:
+  - name: Basalt link
+    schemes: [basalt]
+publish:
+  provider: github
+  owner: Nabhyaraj-Sonagara
+  repo: Basalt
+  releaseType: draft
+
 mac:
   category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  # Signing: with CSC_LINK (a Developer ID certificate) electron-builder signs with it, and
+  # notarizes when APPLE_API_KEY or APPLE_ID credentials are set. Without one, the release
+  # workflow passes --config.mac.identity=- for an ad-hoc signature, so Apple Silicon builds launch.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+dmg:
+  title: Basalt ${version}
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+
 win:
-  target: nsis
-electronVersion: 45.3.3
+  # x64 only: Windows on Arm runs it through its built-in emulation.
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: ${productName}-${version}-win-${arch}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  artifactName: ${productName}-Setup-${version}-${arch}.${ext}
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  category: Office
+  syncDesktopName: true
+  synopsis: Local-first Markdown notes, built for AI
+  description: Basalt is a local-first Markdown notes app. Your notes stay plain files in a folder, and any AI model or agent you choose can work with them.
+  maintainer: Basalt <noreply@github.com>
+  mimeTypes: [x-scheme-handler/basalt]
+deb:
+  artifactName: ${productName}-${version}-linux-${arch}.${ext}
+appImage:
+  artifactName: ${productName}-${version}-linux-${arch}.${ext}
+
 # Lock down the Electron binary (flagged by REA's release-exposure audit).
 electronFuses:
   runAsNode: false
@@ -30,3 +80,5 @@ electronFuses:
   onlyLoadAppFromAsar: true
   enableEmbeddedAsarIntegrityValidation: true
   enableCookieEncryption: true
+  # Re-sign ad-hoc after flipping fuses, so arm64 macOS builds still launch.
+  resetAdHocDarwinSignature: true

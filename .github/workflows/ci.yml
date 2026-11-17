@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Typecheck and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  e2e:
+    name: End-to-end (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @basalt/cli
+      - name: Run the app's end-to-end checks
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq xvfb
+          xvfb-run -a npm run test:e2e
+      - name: Run the app's end-to-end checks
+        if: runner.os != 'Linux'
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: e2e-screenshots-${{ matrix.os }}
+          path: apps/desktop/e2e/screenshots
+
+  package:
+    name: Package (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Build installers
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          extra=""
+          if [ "$RUNNER_OS" = "macOS" ]; then extra="--config.mac.identity=-"; fi
+          npm run tokens
+          npm run build -w @basalt/cli
+          cd apps/desktop
+          npx electron-vite build
+          npx electron-builder --publish never $extra
+      - name: Check the macOS signature
+        if: runner.os == 'macOS'
+        run: |
+          for app in apps/desktop/release/mac*/Basalt.app; do
+            echo "$app"
+            codesign --verify --deep --strict --verbose=2 "$app"
+          done
+      - name: Launch the packaged app
+        shell: bash
+        run: node apps/desktop/e2e/launch-packaged.mjs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: basalt-${{ runner.os }}
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+          if-no-files-found: error
+          retention-days: 7
