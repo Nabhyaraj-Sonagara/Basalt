@@ -13,3 +13,4 @@ export * from './markdown';
 export * from './properties';
 export * from './settings';
 export * from './uri';
+export * from './mindmap';
