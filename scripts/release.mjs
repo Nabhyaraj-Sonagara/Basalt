@@ -2,7 +2,7 @@
 // Then push the commit and the tag (git push && git push origin v0.2.0); the Release workflow
 // builds the installers and publishes the GitHub Release.
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -18,7 +18,16 @@ if (git('status', '--porcelain')) {
   process.exit(1);
 }
 
-const manifests = ['package.json', 'packages/core/package.json', 'packages/ai/package.json', 'packages/cli/package.json', 'packages/ui/package.json', 'apps/desktop/package.json'];
+// Every workspace listed in the root package.json (packages/*, apps/*).
+const rootPkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+const manifests = ['package.json'];
+for (const pattern of rootPkg.workspaces) {
+  const dir = pattern.replace(/\/\*$/, '');
+  for (const name of readdirSync(join(root, dir)).sort()) {
+    const m = `${dir}/${name}/package.json`;
+    if (existsSync(join(root, m))) manifests.push(m);
+  }
+}
 const names = manifests.map((m) => JSON.parse(readFileSync(join(root, m), 'utf8')).name);
 for (const m of manifests) {
   const path = join(root, m);
