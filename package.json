@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "check": "node scripts/check-setup.mjs",
-    "predev": "node scripts/check-setup.mjs",
+    "predev": "node scripts/check-setup.mjs && node scripts/ensure-electron.mjs",
     "tokens": "node scripts/build-tokens.mjs",
     "dev": "npm run tokens && npm run dev -w @basalt/desktop",
     "build": "npm run tokens && npm run build -w @basalt/cli && npm run build -w @basalt/desktop",
@@ -22,8 +22,8 @@
     "test:e2e": "npm run build -w @basalt/desktop && node apps/desktop/e2e/run.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "basalt": "node packages/cli/dist/basalt.mjs",
-    "postinstall": "node scripts/build-tokens.mjs",
-    "prebuild": "node scripts/check-setup.mjs"
+    "postinstall": "node scripts/build-tokens.mjs && node scripts/ensure-electron.mjs",
+    "prebuild": "node scripts/check-setup.mjs && node scripts/ensure-electron.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

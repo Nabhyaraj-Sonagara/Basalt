@@ -68,6 +68,29 @@ jobs:
           name: e2e-screenshots-${{ matrix.os }}
           path: apps/desktop/e2e/screenshots
 
+  dev-mode:
+    name: Dev mode (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Run npm run dev on a fresh profile
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -q && sudo apt-get install -yq xvfb
+          xvfb-run -a node apps/desktop/e2e/dev-smoke.mjs
+      - name: Run npm run dev on a fresh profile
+        if: runner.os != 'Linux'
+        run: node apps/desktop/e2e/dev-smoke.mjs
+
   sync-e2e:
     name: Sync end-to-end (two app instances)
     runs-on: ubuntu-latest

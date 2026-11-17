@@ -297,7 +297,8 @@ function registerIpc() {
     const bundled = app.isPackaged ? join(process.resourcesPath, 'sample-hive') : resolve(here, '../../../../fixtures/sample-hive');
     if (!existsSync(bundled)) return null;
     // Copy so the original stays pristine.
-    const dest = join(app.getPath('documents'), 'Basalt sample hive');
+    // BASALT_DOCUMENTS_DIR lets tests keep the copy out of the real Documents folder.
+    const dest = join(process.env.BASALT_DOCUMENTS_DIR || app.getPath('documents'), 'Basalt sample hive');
     if (!existsSync(dest)) await fs.cp(bundled, dest, { recursive: true });
     return dest;
   });

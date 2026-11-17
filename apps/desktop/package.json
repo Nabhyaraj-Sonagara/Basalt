@@ -6,12 +6,12 @@
   "type": "module",
   "main": "out/main/index.js",
   "scripts": {
-    "predev": "node ../../scripts/check-setup.mjs",
+    "predev": "node ../../scripts/check-setup.mjs && node ../../scripts/ensure-electron.mjs",
     "dev": "electron-vite dev",
-    "prebuild": "node ../../scripts/check-setup.mjs",
+    "prebuild": "node ../../scripts/check-setup.mjs && node ../../scripts/ensure-electron.mjs",
     "build": "electron-vite build",
     "package": "electron-vite build && electron-builder --publish never",
-    "prepackage": "node ../../scripts/check-setup.mjs"
+    "prepackage": "node ../../scripts/check-setup.mjs && node ../../scripts/ensure-electron.mjs"
   },
   "dependencies": {
     "@basalt/ai": "0.1.0",

@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import { LinkResolver, extOf, isNote } from '@basalt/core/browser';
 import type { HiveSnapshot, NoteSummary } from '../../shared/api';
 
@@ -153,8 +153,31 @@ export function subscribe(l: () => void): () => void {
   return () => listeners.delete(l);
 }
 
+/**
+ * Subscribes a component to part of the store. The selected value is cached per store state,
+ * so selectors that build new arrays or objects (for example `s.hive?.notes ?? []`) don't make
+ * React think the store changed on every read, which would loop and blank the window.
+ */
 export function useStore<T>(sel: (s: State) => T): T {
-  return useSyncExternalStore(subscribe, () => sel(state));
+  const cache = useRef<{ state: State; sel: (s: State) => T; value: T } | null>(null);
+  return useSyncExternalStore(subscribe, () => {
+    const c = cache.current;
+    if (c && c.state === state && c.sel === sel) return c.value;
+    const value = sel(state);
+    // Same state, new selector function (an inline arrow re-created on render): keep the old value if it's equivalent.
+    if (c && c.state === state && shallowEqual(c.value, value)) {
+      cache.current = { state, sel, value: c.value };
+      return c.value;
+    }
+    cache.current = { state, sel, value };
+    return value;
+  });
+}
+
+function shallowEqual(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((x, i) => Object.is(x, b[i]));
+  return false;
 }
 
 export function applySnapshot(snap: HiveSnapshot): void {

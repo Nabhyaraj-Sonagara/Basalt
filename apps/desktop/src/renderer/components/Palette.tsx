@@ -7,6 +7,9 @@ import { activeTab, getState, noteTitle, setState, useStore } from '../lib/store
 import { editorFor } from './Editor';
 import { addNoteToCanvas } from './CanvasView';
 
+const NONE: NonNullable<ReturnType<typeof getState>['hive']>['notes'] = [];
+const NONE_FILES: NonNullable<ReturnType<typeof getState>['hive']>['files'] = [];
+
 interface Row extends PaletteItem {
   run: (opts: { newTab: boolean }) => void;
 }
@@ -29,8 +32,8 @@ function rememberCommand(id: string) {
 
 export function Palette() {
   const palette = useStore((s) => s.palette);
-  const notes = useStore((s) => s.hive?.notes ?? []);
-  const files = useStore((s) => s.hive?.files ?? []);
+  const notes = useStore((s) => s.hive?.notes ?? NONE);
+  const files = useStore((s) => s.hive?.files ?? NONE_FILES);
   const [index, setIndex] = useState(0);
   const [templates, setTemplates] = useState<string[]>([]);
   const wrap = useRef<HTMLDivElement>(null);
