@@ -174,7 +174,8 @@ await step('settings and assistant setup', async () => {
   await shot('10-settings-assistant');
   await page.locator('.settings-nav button:text("AI apps and agents")').click();
   await page.waitForSelector('.copy-block');
-  assert.match(await page.locator('.copy-block pre').first().innerText(), /--mcp/);
+  // The launch command arrives from the main process a moment after the page renders.
+  await page.waitForFunction(() => /--mcp/.test(document.querySelector('.copy-block pre')?.textContent ?? ''), null, { timeout: 10000 });
   await shot('11-settings-agents');
   await page.keyboard.press('Escape');
 });
