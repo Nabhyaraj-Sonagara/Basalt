@@ -10,6 +10,8 @@ export interface HiveSettings {
     vimMode: boolean;
     spellcheck: boolean;
     showFrontmatter: boolean;
+    /** Typing / opens a menu of things to insert. */
+    slashCommands: boolean;
   };
   links: { updateOnRename: boolean; useWikilinks: boolean };
   snapshots: { intervalMinutes: number; keep: number };
@@ -22,7 +24,7 @@ export const DEFAULT_SETTINGS: HiveSettings = {
   attachments: { folder: 'Attachments' },
   newNotes: { folder: '' },
   uniqueNote: { format: 'YYYYMMDDHHmm', folder: '' },
-  editor: { defaultMode: 'live', readableLineLength: true, vimMode: false, spellcheck: false, showFrontmatter: false },
+  editor: { defaultMode: 'live', readableLineLength: true, vimMode: false, spellcheck: false, showFrontmatter: false, slashCommands: true },
   links: { updateOnRename: true, useWikilinks: true },
   snapshots: { intervalMinutes: 5, keep: 20 },
   snippets: [],

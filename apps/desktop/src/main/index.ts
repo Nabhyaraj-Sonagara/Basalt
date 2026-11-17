@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, net, protocol, safeStorage, sessio
 import { existsSync, promises as fs } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { Hive, safeRelPath, type HiveEvent } from '@basalt/core';
+import { Hive, parseBasaltUri, safeRelPath, type HiveEvent } from '@basalt/core';
 import {
   PROVIDER_PRESETS,
   SemanticIndex,
@@ -12,7 +12,9 @@ import {
   type ProviderConfig,
   type SemanticHit,
 } from '@basalt/ai';
-import type { AiSettings, ChatStart, HiveChange, HiveSnapshot, NoteSummary, ProviderSettings } from '../shared/api';
+import type { AiSettings, AppInfo, ChatStart, HiveChange, HiveSnapshot, NoteSummary, ProviderSettings, UriRequest } from '../shared/api';
+import { editableContextMenu, installMenu } from './menu';
+import { checkForUpdates, initUpdater, installUpdate, updateStatus } from './updater';
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL;
 const here = import.meta.dirname;
@@ -46,7 +48,19 @@ async function saveState() {
 // ---------- hive ----------
 
 let hive: Hive | null = null;
+/** The main window. */
 let win: BrowserWindow | null = null;
+/** Pop-out windows, each showing one note. */
+const popouts = new Set<BrowserWindow>();
+
+function broadcast(channel: string, payload: unknown) {
+  for (const w of [win, ...popouts]) if (w && !w.isDestroyed()) w.webContents.send(channel, payload);
+}
+
+function closePopouts() {
+  for (const w of popouts) w.close();
+  popouts.clear();
+}
 let semantic: SemanticIndex | null = null;
 let semanticDirty = true;
 let pending: HiveChange[] = [];
@@ -77,6 +91,7 @@ function snapshot(h: Hive): HiveSnapshot {
 async function openHive(path: string, create = false): Promise<HiveSnapshot> {
   const root = resolve(path);
   if (hive?.root === root) return snapshot(hive);
+  closePopouts();
   await hive?.close();
   hive = await Hive.open(root, { watch: true, create });
   semantic = null;
@@ -90,7 +105,7 @@ async function openHive(path: string, create = false): Promise<HiveSnapshot> {
         flushTimer = null;
         const batch = pending;
         pending = [];
-        win?.webContents.send('hive:change', batch);
+        broadcast('hive:change', batch);
       }, 80);
     }
   });
@@ -163,17 +178,19 @@ async function semanticIndex(): Promise<SemanticIndex> {
   }
   if (semanticDirty) {
     semanticDirty = false;
-    await semantic.update((done, total) => win?.webContents.send('ai:index-progress', { done, total }));
+    await semantic.update((done, total) => broadcast('ai:index-progress', { done, total }));
   }
   return semantic;
 }
 
 const chats = new Map<string, AbortController>();
 
-async function runChat(req: ChatStart) {
+async function runChat(req: ChatStart, to: Electron.WebContents) {
   const ctrl = new AbortController();
   chats.set(req.id, ctrl);
-  const send = (e: object) => win?.webContents.send('ai:chat', { id: req.id, ...e });
+  const send = (e: object) => {
+    if (!to.isDestroyed()) to.send('ai:chat', { id: req.id, ...e });
+  };
   try {
     const h = requireHive();
     const cfg = providerConfig(req.providerId);
@@ -206,26 +223,67 @@ async function runChat(req: ChatStart) {
 /** Only Basalt's own renderer may call into the main process. */
 function trustedSender(e: Electron.IpcMainInvokeEvent): boolean {
   const url = e.senderFrame?.url ?? '';
-  if (!win || e.sender.id !== win.webContents.id) return false;
+  const w = BrowserWindow.fromWebContents(e.sender);
+  if (!w || (w !== win && !popouts.has(w))) return false;
+  if (e.senderFrame !== e.sender.mainFrame) return false;
   if (isDev) return url.startsWith(process.env.ELECTRON_RENDERER_URL!);
   return url.startsWith(pathToFileURL(join(here, '../renderer/')).toString());
 }
 
-function handle(channel: string, fn: (...args: any[]) => unknown) {
+function handle(channel: string, fn: (this: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown) {
   ipcMain.handle(channel, async (e, ...args) => {
     if (!trustedSender(e)) throw new Error(`Blocked ${channel} from an untrusted frame`);
-    return fn(...args);
+    return fn.apply(e, args);
   });
+}
+
+// ---------- basalt:// links ----------
+
+let pendingUri: UriRequest | null = null;
+
+/** Resolves a link's hive to one the user has opened before; links can't open arbitrary folders. */
+function resolveUri(url: string): UriRequest | null {
+  const u = parseBasaltUri(url);
+  if (!u) return null;
+  const { hive: wanted, ...rest } = u;
+  if (!wanted) {
+    const path = hive?.root ?? (appState.lastHive && existsSync(appState.lastHive) ? appState.lastHive : null);
+    return path ? { ...rest, hivePath: path } : { ...rest, hivePath: null, error: 'Open a hive in Basalt first, then try the link again.' };
+  }
+  const match =
+    appState.recent.find((r) => r.path === resolve(wanted)) ??
+    appState.recent.find((r) => r.name.toLowerCase() === wanted.toLowerCase());
+  if (!match || !existsSync(match.path)) return { ...rest, hivePath: null, error: `Basalt hasn't opened a hive called “${wanted}” on this computer. Open it once, then try the link again.` };
+  return { ...rest, hivePath: match.path };
+}
+
+function handleUrl(url: string) {
+  const req = resolveUri(url);
+  if (!req) return;
+  if (win && !win.isDestroyed() && win.webContents.getURL()) {
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+    win.webContents.send('app:uri', req);
+  } else pendingUri = req;
+}
+
+const uriArg = (argv: string[]) => argv.find((a) => /^basalt:/i.test(a));
+
+function sendCommand(id: string) {
+  const w = BrowserWindow.getFocusedWindow() ?? win;
+  w?.webContents.send('app:command', id);
 }
 
 function registerIpc() {
   handle('app:recent', () => appState.recent.filter((r) => existsSync(r.path)));
-  handle('app:pickFolder', async () => {
-    const res = await dialog.showOpenDialog(win!, { properties: ['openDirectory', 'createDirectory'], title: 'Open a folder as a hive' });
+  handle('app:pickFolder', async function () {
+    const res = await dialog.showOpenDialog(BrowserWindow.fromWebContents(this.sender)!, { properties: ['openDirectory', 'createDirectory'], title: 'Open a folder as a hive' });
     return res.canceled ? null : res.filePaths[0];
   });
   handle('app:openHive', (path: string, opts?: { create?: boolean }) => openHive(String(path), !!opts?.create));
   handle('app:closeHive', async () => {
+    closePopouts();
     await hive?.close();
     hive = null;
     appState.lastHive = null;
@@ -253,7 +311,27 @@ function registerIpc() {
     return appState.lastHive && existsSync(appState.lastHive) ? appState.lastHive : null;
   });
 
+  handle('app:info', function (): AppInfo {
+    const hash = decodeURIComponent(new URL(this.sender.getURL()).hash.slice(1));
+    return { version: app.getVersion(), platform: process.platform, popout: hash.startsWith('popout=') ? hash.slice(7) : null };
+  });
+  handle('app:popout', (p: string) => {
+    const path = safeRelPath(String(p));
+    if (!requireHive().exists(path)) throw new Error(`No such note: ${path}`);
+    createWindow(path);
+  });
+  handle('app:setSpellcheck', (on: boolean) => session.defaultSession.setSpellCheckerEnabled(!!on));
+  handle('app:takePendingUri', () => {
+    const u = pendingUri;
+    pendingUri = null;
+    return u;
+  });
+  handle('app:checkForUpdates', () => checkForUpdates());
+  handle('app:installUpdate', () => installUpdate());
+  handle('app:updateStatus', () => updateStatus());
+
   handle('hive:snapshot', () => snapshot(requireHive()));
+  handle('hive:merge', (a: string, b: string) => requireHive().merge(String(a), String(b)));
   handle('hive:read', (p: string) => requireHive().read(p));
   handle('hive:readSubpath', (p: string, s?: string) => requireHive().readSubpath(p, s));
   handle('hive:write', async (p: string, t: string) => void (await requireHive().write(p, String(t))));
@@ -336,7 +414,9 @@ function registerIpc() {
     return aiSettings();
   });
   handle('ai:listModels', (id: string) => createProvider(providerConfig(id)).listModels());
-  handle('ai:chat', (req: ChatStart) => void runChat(req));
+  handle('ai:chat', function (req: ChatStart) {
+    void runChat(req, this.sender);
+  });
   handle('ai:cancel', (id: string) => chats.get(id)?.abort());
   handle('ai:semanticSearch', async (q: string) => (await semanticIndex()).search(String(q), 20));
   handle('ai:related', async (p: string, unlinkedOnly?: boolean) => (await semanticIndex()).related(p, 8, !!unlinkedOnly));
@@ -349,11 +429,11 @@ function registerIpc() {
 
 // ---------- window ----------
 
-function createWindow() {
-  win = new BrowserWindow({
-    width: 1360,
-    height: 860,
-    minWidth: 720,
+function createWindow(popout?: string) {
+  const w = new BrowserWindow({
+    width: popout ? 760 : 1360,
+    height: popout ? 820 : 860,
+    minWidth: popout ? 420 : 720,
     minHeight: 480,
     title: 'Basalt',
     backgroundColor: '#fbf6ea',
@@ -365,25 +445,65 @@ function createWindow() {
       sandbox: true,
       nodeIntegration: false,
       webSecurity: true,
-      spellcheck: false,
+      // Turned on and off by the editor's spellcheck setting (session.setSpellCheckerEnabled).
+      spellcheck: true,
     },
   });
-  win.once('ready-to-show', () => win?.show());
-  win.webContents.setWindowOpenHandler(({ url }) => {
+  if (popout) {
+    popouts.add(w);
+    w.on('closed', () => popouts.delete(w));
+  } else {
+    win = w;
+    w.on('closed', () => {
+      if (win === w) win = null;
+      closePopouts();
+    });
+  }
+  w.once('ready-to-show', () => w.show());
+  w.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/i.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
-  win.webContents.on('will-navigate', (e, url) => {
+  w.webContents.on('will-navigate', (e, url) => {
     if (isDev && url.startsWith(process.env.ELECTRON_RENDERER_URL!)) return;
     e.preventDefault();
     if (/^https?:/i.test(url)) void shell.openExternal(url);
   });
-  if (isDev) void win.loadURL(process.env.ELECTRON_RENDERER_URL!);
-  else void win.loadFile(join(here, '../renderer/index.html'));
+  w.webContents.on('context-menu', (_e, params) => editableContextMenu(w.webContents, params, (id) => w.webContents.send('app:command', id)));
+  const hash = popout ? `popout=${encodeURIComponent(popout)}` : undefined;
+  if (isDev) void w.loadURL(process.env.ELECTRON_RENDERER_URL! + (hash ? `#${hash}` : ''));
+  else void w.loadFile(join(here, '../renderer/index.html'), hash ? { hash } : undefined);
+  if (popout) w.setTitle(`${basename(popout).replace(/\.md$/i, '')} — Basalt`);
+  return w;
 }
 
+let stateLoaded = false;
+const earlyUrls: string[] = [];
+
+// One running copy: a second launch (or a basalt:// link) hands its arguments to this one.
+const primary = app.requestSingleInstanceLock();
+if (!primary) app.quit();
+app.on('second-instance', (_e, argv) => {
+  const url = uriArg(argv);
+  if (url) handleUrl(url);
+  else if (win) {
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  }
+});
+// macOS delivers links here, including the one that launched the app.
+app.on('open-url', (e, url) => {
+  e.preventDefault();
+  if (stateLoaded) handleUrl(url);
+  else earlyUrls.push(url);
+});
+if (app.isPackaged) app.setAsDefaultProtocolClient('basalt');
+
 app.whenReady().then(async () => {
+  if (!primary) return;
   await Promise.all([loadState(), loadAi()]);
+  app.setAboutPanelOptions({ applicationName: 'Basalt', applicationVersion: app.getVersion(), website: 'https://nabhyaraj-sonagara.github.io/Basalt/' });
+  session.defaultSession.setSpellCheckerEnabled(false);
 
   // Attachments are served from the open hive only, with path validation.
   protocol.handle('basalt-file', async (request) => {
@@ -411,7 +531,15 @@ app.whenReady().then(async () => {
   }
 
   registerIpc();
+  installMenu({ command: sendCommand, checkForUpdates: () => {
+    checkForUpdates();
+    sendCommand('show-updates');
+  }, isDev });
+  stateLoaded = true;
+  const launchUrl = uriArg(process.argv);
+  for (const url of [...earlyUrls, ...(launchUrl ? [launchUrl] : [])]) handleUrl(url);
   createWindow();
+  void initUpdater((s) => broadcast('app:update', s));
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

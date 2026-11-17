@@ -18,7 +18,13 @@ import {
   toggleBookmark,
   toggleReading,
   closeHive,
+  copyNoteUri,
+  extractSelection,
+  openAnotherHive,
+  openInNewWindow,
+  api,
 } from './actions';
+import { editorFor } from '../components/Editor';
 import { activeTab, getState, setState, setTheme } from './store';
 
 export interface Command {
@@ -78,6 +84,27 @@ export const COMMANDS: Command[] = [
   { id: 'settings', name: 'Open settings', icon: 'settings', hotkey: 'Mod+,', run: () => setState({ settingsOpen: 'editor' }) },
   { id: 'hotkeys', name: 'Edit hotkeys', icon: 'settings', run: () => setState({ settingsOpen: 'hotkeys' }) },
   { id: 'agents', name: 'Connect an agent (MCP and CLI)', icon: 'command', run: () => setState({ settingsOpen: 'agents' }) },
+  { id: 'open-window', name: 'Open this note in a new window', icon: 'note', when: hasFile, run: () => openInNewWindow(activeTab()?.path) },
+  { id: 'copy-url', name: 'Copy Basalt link to this note', icon: 'wikilink', when: hasFile, run: () => copyNoteUri(activeTab()?.path) },
+  { id: 'merge', name: 'Merge this note into another note', icon: 'note', when: hasNote, run: () => setState({ palette: { mode: 'merge', query: '', payload: activeTab()!.path! } }) },
+  {
+    id: 'extract',
+    name: 'Extract selection to a new note',
+    icon: 'new-note',
+    when: hasNote,
+    run: () => {
+      const tab = activeTab();
+      const view = tab ? editorFor(tab.id) : undefined;
+      if (tab?.path && view) extractSelection(view, tab.path);
+    },
+  },
+  { id: 'open-hive', name: 'Open another folder as a hive', icon: 'folder', run: () => openAnotherHive() },
+  { id: 'check-updates', name: 'Check for updates', icon: 'settings', run: () => {
+    void api().app.checkForUpdates();
+    setState({ settingsOpen: 'about' });
+  } },
+  // Sent by the menu bar after it starts a check; not listed in the palette.
+  { id: 'show-updates', name: 'Show updates', when: () => false, run: () => setState({ settingsOpen: 'about' }) },
   { id: 'close-hive', name: 'Close this hive', icon: 'folder', run: () => closeHive() },
 ];
 

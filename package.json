@@ -9,6 +9,8 @@
     "apps/*"
   ],
   "scripts": {
+    "check": "node scripts/check-setup.mjs",
+    "predev": "node scripts/check-setup.mjs",
     "tokens": "node scripts/build-tokens.mjs",
     "dev": "npm run tokens && npm run dev -w @basalt/desktop",
     "build": "npm run tokens && npm run build -w @basalt/cli && npm run build -w @basalt/desktop",
@@ -16,10 +18,11 @@
     "test:e2e": "npm run build -w @basalt/desktop && node apps/desktop/e2e/run.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "basalt": "node packages/cli/dist/basalt.mjs",
-    "postinstall": "node scripts/build-tokens.mjs"
+    "postinstall": "node scripts/build-tokens.mjs",
+    "prebuild": "node scripts/check-setup.mjs"
   },
   "engines": {
-    "node": ">=20"
+    "node": "^20.19.0 || >=22.12.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

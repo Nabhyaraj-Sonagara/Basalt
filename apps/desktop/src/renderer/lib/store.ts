@@ -46,7 +46,7 @@ export interface Bookmark {
   title: string;
 }
 
-export type PaletteMode = 'commands' | 'files' | 'templates' | 'move';
+export type PaletteMode = 'commands' | 'files' | 'templates' | 'move' | 'merge';
 
 export interface PromptState {
   title: string;
@@ -86,6 +86,8 @@ export interface State {
   expanded: Set<string>;
   snippets: { name: string; css: string }[];
   enabledSnippets: string[];
+  /** In a pop-out window: the note it shows. Pop-outs don't save the workspace layout. */
+  popout: string | null;
 }
 
 let tabSeq = 0;
@@ -131,6 +133,7 @@ let state: State = {
   expanded: new Set(),
   snippets: [],
   enabledSnippets: [],
+  popout: null,
 };
 
 const listeners = new Set<() => void>();

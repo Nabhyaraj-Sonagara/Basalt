@@ -52,6 +52,17 @@ describe('Hive', () => {
     expect(tags.engineering).toBe(1);
   });
 
+  it('merges a note into another and repoints links', async () => {
+    const res = await hive.merge('People/Ada.md', 'Projects/Basalt launch.md');
+    expect(hive.exists('People/Ada.md')).toBe(false);
+    const target = await hive.read('Projects/Basalt launch.md');
+    expect(target).toMatch(/## Ada\n/);
+    expect(res.updated.length).toBeGreaterThan(0);
+    for (const p of res.updated) expect(await hive.read(p)).not.toMatch(/\[\[(People\/)?Ada(\||\]|#)/);
+    expect(hive.backlinks('Projects/Basalt launch.md').some((b) => b.source === 'Projects/Basalt launch.md')).toBe(false);
+    await expect(hive.merge('Welcome.md', 'Welcome.md')).rejects.toThrow();
+  });
+
   it('renames and rewrites links everywhere, including canvases', async () => {
     const res = await hive.rename('Projects/Basalt launch.md', 'Projects/Launch plan.md');
     expect(res.updated.sort()).toEqual(['Canvas map.canvas', 'Daily/2026-11-15.md', 'People/Ada.md', 'Welcome.md']);

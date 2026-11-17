@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button, Kbd, Select, SettingRow, SettingsGroup, Toggle, Icon } from '@basalt/ui';
 import type { HiveSettings } from '@basalt/core/browser';
-import type { AiSettings, ProviderSettings } from '../../shared/api';
+import type { AiSettings, ProviderSettings, UpdateStatus } from '../../shared/api';
 import { COMMANDS, eventToHotkey, formatHotkey, hotkeyFor } from '../lib/commands';
 import { api, errorToast } from '../lib/actions';
 import { getState, setState, setTheme, toast, updateToast, dismissToast, useStore } from '../lib/store';
@@ -14,6 +14,7 @@ const SECTIONS = [
   { id: 'hotkeys', label: 'Hotkeys' },
   { id: 'assistant', label: 'Assistant' },
   { id: 'agents', label: 'Agents and CLI' },
+  { id: 'about', label: 'About and updates' },
 ];
 
 function useHiveSettings(): [HiveSettings, (patch: Partial<HiveSettings>) => void] {
@@ -41,8 +42,11 @@ function EditorSection() {
       <SettingRow label="Readable line length" description="Keep lines to about 68 characters.">
         <Toggle checked={s.editor.readableLineLength} onChange={(v) => save({ editor: { ...s.editor, readableLineLength: v } })} />
       </SettingRow>
-      <SettingRow label="Spellcheck">
+      <SettingRow label="Spellcheck" description="Right-click a misspelled word for suggestions.">
         <Toggle checked={s.editor.spellcheck} onChange={(v) => save({ editor: { ...s.editor, spellcheck: v } })} />
+      </SettingRow>
+      <SettingRow label="Slash commands" description="Type / to insert headings, tasks, callouts, tables, links and templates.">
+        <Toggle checked={s.editor.slashCommands !== false} onChange={(v) => save({ editor: { ...s.editor, slashCommands: v } })} />
       </SettingRow>
       <SettingRow label="Vim key bindings" description="Applies to notes opened after the change.">
         <Toggle checked={s.editor.vimMode} onChange={(v) => save({ editor: { ...s.editor, vimMode: v } })} />
@@ -383,6 +387,51 @@ function AgentsSection() {
   );
 }
 
+const UPDATE_TEXT: Record<UpdateStatus['state'], string> = {
+  idle: '',
+  checking: 'Checking for updates…',
+  current: 'You have the latest version.',
+  available: 'A new version is available.',
+  downloading: 'Downloading the update…',
+  ready: 'The update is ready. It installs when you quit Basalt.',
+  error: "Couldn't check for updates.",
+  unsupported: 'Updates are checked only in installed builds, not in development.',
+};
+
+function AboutSection() {
+  const [s, setS] = useState<UpdateStatus | null>(null);
+  useEffect(() => {
+    void api().app.updateStatus().then(setS);
+    return api().app.onUpdate(setS);
+  }, []);
+  if (!s) return null;
+  const text = [UPDATE_TEXT[s.state], s.latest && s.latest !== s.version ? `Latest: ${s.latest}.` : '', s.state === 'downloading' && s.percent != null ? `${s.percent}%` : '', s.error ?? ''].filter(Boolean).join(' ');
+  return (
+    <SettingsGroup title="About Basalt" description="A local-first Markdown notes app. Your notes stay plain files in your hive.">
+      <SettingRow label={`Version ${s.version}`} description={text || 'Basalt checks for updates when it starts and every few hours.'}>
+        {s.state === 'ready' ? (
+          <Button size="sm" variant="primary" onClick={() => void api().app.installUpdate()}>
+            Restart and update
+          </Button>
+        ) : s.state === 'available' && s.downloadUrl ? (
+          <Button size="sm" variant="primary" onClick={() => void api().app.installUpdate()}>
+            Download {s.latest}
+          </Button>
+        ) : (
+          <Button size="sm" variant="secondary" disabled={s.state === 'checking' || s.state === 'downloading'} onClick={() => void api().app.checkForUpdates().then(setS)}>
+            Check for updates
+          </Button>
+        )}
+      </SettingRow>
+      <SettingRow label="Website" description="Downloads, release notes and help.">
+        <Button size="sm" variant="quiet" onClick={() => void api().app.openExternal('https://nabhyaraj-sonagara.github.io/Basalt/')}>
+          Open
+        </Button>
+      </SettingRow>
+    </SettingsGroup>
+  );
+}
+
 export function Settings() {
   const open = useStore((s) => s.settingsOpen);
   const hasHive = useStore((s) => !!s.hive);
@@ -408,6 +457,7 @@ export function Settings() {
           {open === 'hotkeys' ? <HotkeysSection /> : null}
           {open === 'assistant' ? <AssistantSection /> : null}
           {open === 'agents' ? <AgentsSection /> : null}
+          {open === 'about' ? <AboutSection /> : null}
         </div>
       </div>
     </div>

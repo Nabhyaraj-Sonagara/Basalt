@@ -1,5 +1,5 @@
-import { dirOf, extOf, isNote } from '@basalt/core/browser';
-import type { HiveChange } from '../../shared/api';
+import { buildBasaltUri, dirOf, extOf, isNote } from '@basalt/core/browser';
+import type { HiveChange, UriRequest } from '../../shared/api';
 import {
   activePane,
   activeTab,
@@ -97,7 +97,7 @@ export function scheduleWorkspaceSave(): void {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = window.setTimeout(() => {
     const s = getState();
-    if (!s.hive) return;
+    if (!s.hive || s.popout) return;
     void api().hive.writeConfig('workspace.json', {
       panes: s.panes.map((p) => ({ ...p, tabs: p.tabs.filter((t) => t.kind !== 'empty' || p.tabs.length === 1).map(({ line: _l, ...t }) => t) })),
       activePane: s.activePane,
@@ -422,4 +422,88 @@ export function removeBookmark(i: number): void {
 
 export function showSearch(query?: string): void {
   setState((s) => ({ leftOpen: true, leftView: 'search', searchQuery: query ?? s.searchQuery, searchFocus: s.searchFocus + 1 }));
+}
+
+// ---------- windows, links and the note composer ----------
+
+export async function openAnotherHive(): Promise<void> {
+  const path = await api().app.pickFolder();
+  if (path) await openHive(path);
+}
+
+export function openInNewWindow(path: string | null | undefined): void {
+  if (!path) return;
+  void api().app.popout(path).catch((e) => errorToast("Couldn't open a new window", e));
+}
+
+export function noteUri(path: string): string {
+  const name = getState().hive?.info.name ?? '';
+  return buildBasaltUri('open', { hive: name, file: path });
+}
+
+export function copyNoteUri(path: string | null | undefined): void {
+  if (!path) return;
+  void navigator.clipboard.writeText(noteUri(path)).then(() => toast({ tone: 'success', title: 'Copied the Basalt link' }, 1800));
+}
+
+export async function mergeNotes(source: string, target: string): Promise<void> {
+  try {
+    const res = await api().hive.merge(source, target);
+    openPath(target);
+    toast({ tone: 'success', title: `Merged ${noteTitle(source)} into ${noteTitle(target)}`, body: res.updated.length ? `Updated links in ${res.updated.length} note${res.updated.length === 1 ? '' : 's'}.` : undefined });
+  } catch (err) {
+    errorToast("Couldn't merge the notes", err);
+  }
+}
+
+/** Moves the selected text into a new note and leaves a link in its place. */
+export function extractSelection(view: { state: { selection: { main: { from: number; to: number } }; sliceDoc(a: number, b: number): string }; dispatch(tr: object): void }, sourcePath: string): void {
+  const { from, to } = view.state.selection.main;
+  const text = view.state.sliceDoc(from, to);
+  if (!text.trim()) {
+    toast({ tone: 'neutral', title: 'Select some text to extract first' });
+    return;
+  }
+  const firstLine = text.trim().split('\n')[0].replace(/^#+\s*/, '').replace(/[\\/:*?"<>|#^[\]]/g, '').trim().slice(0, 60);
+  setState({
+    prompt: {
+      title: 'Extract to a new note',
+      label: 'Note name',
+      value: firstLine || 'Untitled',
+      confirm: 'Extract',
+      onSubmit: async (value) => {
+        const name = value.trim() || 'Untitled';
+        const created = await createNote(name, { folder: newNoteFolder(sourcePath), text: text.replace(/^\n+/, '') });
+        if (!created) return;
+        const linktext = getState().resolver.linktextFor(created, sourcePath) || created.replace(/\.md$/i, '');
+        view.dispatch({ changes: { from, to, insert: `[[${linktext}]]` } });
+        toast({ tone: 'success', title: `Extracted to ${noteTitle(created)}` });
+      },
+    },
+  });
+}
+
+/** Runs a basalt:// link: switches hive if needed, then opens, creates or searches. */
+export async function handleUri(u: UriRequest): Promise<void> {
+  if (u.error || !u.hivePath) {
+    toast({ tone: 'danger', title: "Couldn't open that Basalt link", body: u.error }, 8000);
+    return;
+  }
+  if (getState().popout) return;
+  if (getState().hive?.info.root !== u.hivePath) await openHive(u.hivePath);
+  const s = getState();
+  if (!s.hive) return;
+  if (u.action === 'open') {
+    const [target, ...rest] = u.file!.split('#');
+    const path = s.notesByPath.has(target) || s.hive.files.some((f) => f.path === target) ? target : s.resolver.resolve(target.replace(/\.md$/i, ''), '');
+    if (!path) {
+      toast({ tone: 'danger', title: `No note called “${target}” in ${s.hive.info.name}` }, 6000);
+      return;
+    }
+    await openLink(path.replace(/\.md$/i, ''), rest.length ? '#' + rest.join('#') : undefined, '', { newTab: !!activeTab()?.path });
+  } else if (u.action === 'new') {
+    const created = await createNote((u.name ?? 'Untitled').replace(/\.md$/i, ''), { text: u.content ?? '', exactPath: !!u.name?.includes('/') });
+    if (created) openPath(created, { newTab: true });
+  } else if (u.action === 'daily') await openDailyNote(0);
+  else showSearch(u.query ?? '');
 }

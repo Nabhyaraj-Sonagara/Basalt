@@ -16,10 +16,18 @@ const group = (prefix: string, names: string[]) => Object.fromEntries(names.map(
 
 // Only these named, promise-returning calls cross the bridge; the renderer gets no Node or Electron access.
 const api: BasaltApi = {
-  app: group('app', ['recent', 'pickFolder', 'openHive', 'closeHive', 'sampleHivePath', 'openExternal', 'showInFolder', 'cliCommand', 'initialHive']) as unknown as BasaltApi['app'],
+  app: {
+    ...(group('app', [
+      'recent', 'pickFolder', 'openHive', 'closeHive', 'sampleHivePath', 'openExternal', 'showInFolder', 'cliCommand', 'initialHive', 'info', 'popout',
+      'setSpellcheck', 'takePendingUri', 'checkForUpdates', 'installUpdate', 'updateStatus',
+    ]) as unknown as Omit<BasaltApi['app'], 'onUri' | 'onCommand' | 'onUpdate'>),
+    onUri: (cb) => subscribe('app:uri', cb),
+    onCommand: (cb) => subscribe('app:command', cb),
+    onUpdate: (cb) => subscribe('app:update', cb),
+  },
   hive: {
     ...(group('hive', [
-      'snapshot', 'read', 'readSubpath', 'write', 'create', 'createFolder', 'rename', 'trash', 'toggleTask', 'setProperties', 'backlinks', 'unlinked',
+      'snapshot', 'read', 'readSubpath', 'write', 'create', 'createFolder', 'rename', 'merge', 'trash', 'toggleTask', 'setProperties', 'backlinks', 'unlinked',
       'search', 'tags', 'graph', 'query', 'properties', 'dailyNote', 'uniqueNote', 'templates', 'saveSettings', 'readConfig', 'writeConfig',
       'readConfigText', 'writeConfigText', 'snippets', 'snapshots', 'readSnapshot', 'saveAttachment',
     ]) as unknown as Omit<BasaltApi['hive'], 'fileUrl' | 'onChange'>),

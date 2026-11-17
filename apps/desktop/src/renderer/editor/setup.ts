@@ -8,6 +8,7 @@ import { Compartment, EditorSelection, type Extension } from '@codemirror/state'
 import { drawSelection, EditorView, keymap, placeholder, rectangularSelection, dropCursor, type KeyBinding } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
 import { basaltCompletions } from './complete';
+import { slashCompletions } from './slash';
 import { frontmatter } from './frontmatter';
 import { livePreview } from './livePreview';
 
@@ -126,7 +127,7 @@ export function baseExtensions(hooks: EditorHooks, mode: 'live' | 'source', spel
     closeBrackets(),
     search({ top: true }),
     highlightSelectionMatches(),
-    autocompletion({ override: [basaltCompletions(hooks.sourcePath)], icons: false, activateOnTyping: true }),
+    autocompletion({ override: [basaltCompletions(hooks.sourcePath), slashCompletions], icons: false, activateOnTyping: true }),
     keymap.of([...formatKeys, ...closeBracketsKeymap, ...markdownKeymap, ...completionKeymap, ...searchKeymap, ...historyKeymap, ...defaultKeymap, indentWithTab]),
     markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: true, extensions: [frontmatter] }),
     syntaxHighlighting(basaltHighlight),

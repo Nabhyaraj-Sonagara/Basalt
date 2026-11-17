@@ -40,8 +40,8 @@ Status codes: **M1** = built in this milestone · **M2** = next milestone · **L
 | Math, diagrams, code | KaTeX/MathJax, Mermaid, syntax-highlighted code | KaTeX, Mermaid (lazy), highlight.js | M1 |
 | Footnotes | `[^1]` with a footnote list | markdown-it-footnote | M1 |
 | Tables | GFM tables | Rendered | M1 (visual table editor L) |
-| Vim keys, spellcheck, RTL | Editor options | Vim via `@replit/codemirror-vim` setting | M2 |
-| Slash commands | `/` opens commands inline | Uses the command palette source | M2 |
+| Vim keys, spellcheck, RTL | Editor options | Vim via `@replit/codemirror-vim`; spellcheck with right-click suggestions. RTL later | M1 |
+| Slash commands | `/` opens commands inline | Headings, lists, callouts, tables, blocks, links, embeds, templates, date | M1 |
 
 ### Linking and knowledge graph
 | Capability | Behaviour | Basalt | Status |
@@ -80,7 +80,7 @@ Status codes: **M1** = built in this milestone · **M2** = next milestone · **L
 |---|---|---|---|
 | Tabs | Pinned and linked tabs | `Tabs` | M1 |
 | Splits | Vertical and horizontal | Split panes (two levels) | M1 |
-| Stacked tabs, pop-out windows | | | M2 |
+| Stacked tabs, pop-out windows | | Pop-out windows built; stacked tabs later | M1 |
 | Sidebars | Left and right docks, collapsible | 248px / 272px per the design system | M1 |
 | Workspace layouts | Save and restore named layouts | Last layout restored; named layouts M2 | M1/M2 |
 | Status bar | Word count, backlinks count, sync state | Status bar | M1 |
@@ -94,7 +94,7 @@ Status codes: **M1** = built in this milestone · **M2** = next milestone · **L
 | Word count | Status bar | M1 |
 | Canvas | JSON Canvas editor: text, file, link and group nodes; edges; pan and zoom | M1 basic |
 | Slides (from `---` separators) | Presentation mode | M2 |
-| Note composer (merge, extract) | Commands | M2 |
+| Note composer (merge, extract) | Commands; merge repoints links | M1 |
 | Audio recorder | | L |
 | Web viewer | | L |
 | Format converter (import from other apps) | Importers | L |
@@ -106,7 +106,7 @@ Status codes: **M1** = built in this milestone · **M2** = next milestone · **L
 |---|---|---|
 | Themes and CSS snippets | Comb and Basalt themes; `.basalt/snippets/*.css` | M1 |
 | Community plugins | Basalt plugin host first, then a compatibility shim for the public plugin API types | L |
-| URI scheme | `basalt://open?hive=…&file=…` | M2 |
+| URI scheme | `basalt://` open, new, daily and search; only hives opened before | M1 |
 | CLI | The incumbent's API exposes `registerCliHandler`, so a CLI exists there too. Basalt ships a first-class `basalt` CLI with JSON output | M1 |
 | Mobile | Capacitor shell over the same renderer | L |
 
