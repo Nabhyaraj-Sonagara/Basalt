@@ -49,3 +49,10 @@ footer a { color: var(--ink-muted); }
   .first-run dl { grid-template-columns: 1fr; gap: 4px; }
   .first-run dd { margin-bottom: 12px; }
 }
+.oneline { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 10px; max-width: 100%; }
+.oneline pre { margin: 0; max-width: min(92vw, 760px); overflow-x: auto; background: var(--surface-sunken); border-radius: var(--radius-sm); padding: 10px 14px; text-align: left; }
+.oneline pre code { background: none; padding: 0; white-space: pre; user-select: all; font-size: 13px; }
+.cmd { display: flex; align-items: stretch; gap: 6px; max-width: min(92vw, 820px); }
+.cmd pre { flex: 1; min-width: 0; }
+.copy { flex: none; font: inherit; font-size: 14px; padding: 0 14px; border-radius: var(--radius-sm); border: 1px solid var(--line-strong, currentColor); background: none; color: inherit; cursor: pointer; }
+.copy:hover { background: var(--surface-sunken); }

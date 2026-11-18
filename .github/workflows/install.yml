@@ -1,0 +1,91 @@
+name: One-line install
+
+# Runs install.sh / install.ps1 against the latest GitHub Release on each platform and checks the
+# installed app starts. Runs when the scripts change and after each release is published.
+on:
+  push:
+    branches: ['**']
+    paths: ['install.sh', 'install.ps1', '.github/workflows/install.yml']
+  pull_request:
+    paths: ['install.sh', 'install.ps1', '.github/workflows/install.yml']
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: install-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install with the one-liner
+        run: sh install.sh
+      - name: Installed app is in place, not quarantined, and starts
+        run: |
+          app=/Applications/Basalt.app
+          test -x "$app/Contents/MacOS/basalt"
+          if xattr -p com.apple.quarantine "$app" 2>/dev/null; then echo "quarantine flag is set"; exit 1; fi
+          codesign --verify --deep "$app"
+          "$app/Contents/MacOS/basalt" --user-data-dir="$RUNNER_TEMP/ud" > "$RUNNER_TEMP/run.log" 2>&1 &
+          pid=$!
+          sleep 15
+          kill -0 "$pid" || { cat "$RUNNER_TEMP/run.log"; exit 1; }
+          kill "$pid"
+          echo "Basalt started from $app"
+      - name: Running it again updates in place
+        run: sh install.sh
+
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [deb, appimage]
+    steps:
+      - uses: actions/checkout@v6
+      - run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Install with the one-liner (.deb, uses sudo)
+        if: matrix.mode == 'deb'
+        run: sh install.sh
+      - name: Install with the one-liner (AppImage, no sudo)
+        if: matrix.mode == 'appimage'
+        run: BASALT_NO_SUDO=1 sh install.sh
+      - name: Installed app starts
+        run: |
+          bin=$(command -v basalt || echo "$HOME/.local/bin/basalt")
+          test -x "$bin"
+          if [ "${{ matrix.mode }}" = appimage ]; then test -s "$HOME/.local/share/applications/basalt.desktop"; fi
+          set +e
+          timeout 20 xvfb-run -a "$bin" --no-sandbox --user-data-dir="$RUNNER_TEMP/ud" > "$RUNNER_TEMP/run.log" 2>&1
+          code=$?
+          set -e
+          # 124 means it was still running when timeout stopped it.
+          if [ "$code" != 124 ]; then cat "$RUNNER_TEMP/run.log"; exit 1; fi
+          echo "Basalt started from $bin"
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install with the one-liner
+        shell: pwsh
+        run: Get-Content -Raw install.ps1 | Invoke-Expression
+      - name: Installed app starts
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 2 -Filter basalt.exe | Select-Object -First 1
+          if (-not $exe) { throw 'basalt.exe was not installed' }
+          $p = Start-Process $exe.FullName -ArgumentList "--user-data-dir=$env:RUNNER_TEMP\ud" -PassThru
+          Start-Sleep 15
+          if ($p.HasExited) { throw "Basalt exited with code $($p.ExitCode)" }
+          Stop-Process -Id $p.Id -Force
+          Write-Host "Basalt started from $($exe.FullName)"
