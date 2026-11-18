@@ -65,7 +65,9 @@ async function step(name, fn) {
     await fn();
     results.push(['ok', name]);
   } catch (e) {
-    results.push(['FAIL', name, e.message.split('\n')[0]]);
+    // First line, plus Playwright's reason when an action kept retrying (covered, moving, hidden…).
+    const why = e.message.split('\n').filter((l) => /intercepts pointer|not stable|not visible|outside of the viewport|detached/.test(l)).slice(-2).map((l) => l.trim());
+    results.push(['FAIL', name, [e.message.split('\n')[0], ...why].join(' | ')]);
     await shot(`fail-${name.replace(/\W+/g, '-')}`).catch(() => {});
   }
 }
@@ -325,7 +327,13 @@ await step('connect Codex to the hive with one click', async () => {
   await page.keyboard.press('Escape');
 });
 
+// Toasts sit over the lower right of the window; close them before clicking around a canvas.
+const clearToasts = async () => {
+  for (const b of await page.locator('.bs-toast-close').all()) await b.click().catch(() => {});
+};
+
 await step('mind map: new map, branches by keyboard, saved as Markdown', async () => {
+  await clearToasts();
   await palette('New mind map');
   await page.waitForSelector('.mm-node.depth-0');
   assert.equal(await page.inputValue('.note-title'), 'Mind map');
@@ -356,6 +364,7 @@ await step('mind map: new map, branches by keyboard, saved as Markdown', async (
 });
 
 await step('mind map: folds, deletes and switches to the Markdown', async () => {
+  await clearToasts();
   await page.locator('.mm-node', { hasText: 'Drawings' }).click();
   await page.keyboard.press('ArrowDown');
   assert.equal(await page.locator('.mm-node.selected .mm-link').innerText(), 'Welcome');
