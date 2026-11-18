@@ -30,8 +30,16 @@ Basalt is a local-first Markdown notes app built so AI can work with your notes 
 - Tabs, split panes and pop-out windows, a command palette and quick switcher, rebindable hotkeys, Comb (light) and Basalt (dark) themes, and CSS snippets.
 - `basalt://` links open a note from anywhere: `basalt://open?hive=Notes&file=Plan`, plus `new`, `daily` and `search`. **Copy Basalt link** in the command palette makes one for the open note.
 
+**Make it yours**
+- Accent colour, interface and note fonts, text size, line width, density and icon size.
+- Pick and reorder the sidebar toolbar buttons, and choose which sidebar tabs and panels show.
+- Every hive gets a crest of basalt columns drawn from its name; give it a colour or an emoji instead.
+- Share a look as a `.basalt-theme.json` file (Settings → Appearance → Themes), plus CSS snippets for anything else.
+
 **Built for AI**
 - **Assistant** that answers using your current note, your selection, or relevant notes from across the hive, and links the notes it used. It works with Claude, OpenAI, Gemini, and any OpenAI-compatible endpoint, including **local models** in Ollama or LM Studio. API keys stay in your system keychain.
+- **Use the AI plan you already pay for**: Settings → AI apps and agents → **Connect** sets your hive up in Claude Desktop, Claude Code or Codex in one click. They start Basalt in the background (`Basalt --mcp`) and work on your notes with your Claude or ChatGPT subscription; no API key, no Node install.
+- **No API key needed for the built-in assistant either**: **Sign in with OpenRouter** (approve Basalt in your browser) or use **Ollama / LM Studio**, which Basalt finds on your computer.
 - **`basalt mcp`**: an MCP server, so Claude Code, Claude Desktop or any other MCP client can search, read, create, append to, set properties on and rename notes. It has no delete tool, and replacing a whole note requires an explicit flag.
 - **`basalt` CLI** with `--json` on every command, for scripts and agents.
 - **`.basalt/agents.md`**: a short conventions file that tells agents and the assistant how your hive is organised.

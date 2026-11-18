@@ -12,15 +12,20 @@ import {
   type ProviderConfig,
   type SemanticHit,
 } from '@basalt/ai';
-import type { AiSettings, AppInfo, ChatStart, HiveChange, HiveSnapshot, NoteSummary, ProviderSettings, UriRequest } from '../shared/api';
+import type { AiSettings, AppInfo, ChatStart, ConnectClientId, HiveChange, HiveSnapshot, NoteSummary, ProviderSettings, UriRequest } from '../shared/api';
 import { editableContextMenu, installMenu } from './menu';
 import { checkForUpdates, initUpdater, installUpdate, updateStatus } from './updater';
 import { SyncController } from './sync';
+import { startMcpMode } from './mcp-mode';
+import { connectClient, connectStatus, disconnectClient, mcpLaunchCommand } from './connect';
+import { detectLocalModels, signInWithOpenRouter } from './openrouter';
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL;
 const here = import.meta.dirname;
 
-protocol.registerSchemesAsPrivileged([
+const MCP_MODE = process.argv.includes('--mcp');
+
+if (!MCP_MODE) protocol.registerSchemesAsPrivileged([
   { scheme: 'basalt-file', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } },
 ]);
 
@@ -221,6 +226,26 @@ async function runChat(req: ChatStart, to: Electron.WebContents) {
   }
 }
 
+async function saveProvider(p: ProviderSettings, apiKey?: string | null): Promise<AiSettings> {
+  const { hasKey: _ignored, ...cfg } = p;
+  const i = ai.providers.findIndex((x) => x.id === cfg.id);
+  if (i >= 0) ai.providers[i] = cfg;
+  else ai.providers.push(cfg);
+  if (apiKey === null) {
+    delete ai.keys[cfg.id];
+    memoryKeys.delete(cfg.id);
+  } else if (apiKey) {
+    if (keychain()) {
+      ai.keys[cfg.id] = safeStorage.encryptString(apiKey).toString('base64');
+      memoryKeys.delete(cfg.id);
+    } else memoryKeys.set(cfg.id, apiKey);
+  }
+  if (!ai.chatProvider) ai.chatProvider = cfg.id;
+  if (ai.embeddings === cfg.id) semantic = null;
+  await saveAi();
+  return aiSettings();
+}
+
 // ---------- IPC ----------
 
 /** Only Basalt's own renderer may call into the main process. */
@@ -316,6 +341,22 @@ function registerIpc() {
     return appState.lastHive && existsSync(appState.lastHive) ? appState.lastHive : null;
   });
 
+  handle('app:saveTextFile', async function (name: string, text: string) {
+    const res = await dialog.showSaveDialog(BrowserWindow.fromWebContents(this.sender)!, { defaultPath: basename(String(name)) });
+    if (res.canceled || !res.filePath) return null;
+    await fs.writeFile(res.filePath, String(text));
+    return res.filePath;
+  });
+  handle('app:openTextFile', async function (extensions: string[]) {
+    const res = await dialog.showOpenDialog(BrowserWindow.fromWebContents(this.sender)!, {
+      properties: ['openFile'],
+      filters: [{ name: 'Basalt files', extensions: (extensions ?? []).map((e) => String(e).replace(/^\./, '')) }],
+    });
+    if (res.canceled || !res.filePaths[0]) return null;
+    const st = await fs.stat(res.filePaths[0]);
+    if (st.size > 2_000_000) throw new Error('That file is too large.');
+    return fs.readFile(res.filePaths[0], 'utf8');
+  });
   handle('app:info', function (): AppInfo {
     const hash = decodeURIComponent(new URL(this.sender.getURL()).hash.slice(1));
     return { version: app.getVersion(), platform: process.platform, popout: hash.startsWith('popout=') ? hash.slice(7) : null };
@@ -388,25 +429,34 @@ function registerIpc() {
 
   handle('ai:presets', () => PROVIDER_PRESETS);
   handle('ai:settings', () => aiSettings());
-  handle('ai:saveProvider', async (p: ProviderSettings, apiKey?: string | null) => {
-    const { hasKey: _ignored, ...cfg } = p;
-    const i = ai.providers.findIndex((x) => x.id === cfg.id);
-    if (i >= 0) ai.providers[i] = cfg;
-    else ai.providers.push(cfg);
-    if (apiKey === null) {
-      delete ai.keys[cfg.id];
-      memoryKeys.delete(cfg.id);
-    } else if (apiKey) {
-      if (keychain()) {
-        ai.keys[cfg.id] = safeStorage.encryptString(apiKey).toString('base64');
-        memoryKeys.delete(cfg.id);
-      } else memoryKeys.set(cfg.id, apiKey);
+  handle('ai:saveProvider', (p: ProviderSettings, apiKey?: string | null) => saveProvider(p, apiKey));
+  handle('ai:signInOpenRouter', async () => {
+    const key = await signInWithOpenRouter((url) => shell.openExternal(url));
+    const preset = PROVIDER_PRESETS.find((x) => x.id === 'openrouter')!;
+    const existing = ai.providers.find((x) => x.id === 'openrouter');
+    const settings = await saveProvider({ id: 'openrouter', kind: preset.kind, label: 'OpenRouter', baseUrl: preset.baseUrl, model: existing?.model || 'openrouter/auto', hasKey: true }, key);
+    ai.chatProvider = 'openrouter';
+    await saveAi();
+    return { ...settings, chatProvider: 'openrouter' };
+  });
+  handle('ai:detectLocal', () => detectLocalModels());
+  handle('ai:useLocal', async (id: 'ollama' | 'lmstudio', model: string, embeddingModel?: string) => {
+    const found = (await detectLocalModels()).find((x) => x.id === id);
+    if (!found) throw new Error('That model server isn\'t running any more.');
+    const preset = PROVIDER_PRESETS.find((x) => x.id === id)!;
+    await saveProvider({ id, kind: preset.kind, label: preset.label, baseUrl: found.baseUrl, model: String(model), embeddingModel: embeddingModel ? String(embeddingModel) : undefined, hasKey: false });
+    ai.chatProvider = id;
+    if (embeddingModel) {
+      ai.embeddings = id;
+      semantic = null;
     }
-    if (!ai.chatProvider) ai.chatProvider = cfg.id;
-    if (ai.embeddings === cfg.id) semantic = null;
     await saveAi();
     return aiSettings();
   });
+  handle('connect:status', () => connectStatus(requireHive().name));
+  handle('connect:add', (id: ConnectClientId) => connectClient(id, requireHive().name, requireHive().root));
+  handle('connect:remove', (id: ConnectClientId) => disconnectClient(id, requireHive().name));
+  handle('connect:launchCommand', () => mcpLaunchCommand(requireHive().root));
   handle('ai:removeProvider', async (id: string) => {
     ai.providers = ai.providers.filter((p) => p.id !== id);
     delete ai.keys[id];
@@ -494,75 +544,80 @@ function createWindow(popout?: string) {
   return w;
 }
 
-let stateLoaded = false;
-const earlyUrls: string[] = [];
+// `--mcp`: run as an MCP server for Claude Desktop, Claude Code or Codex instead of the app.
+if (MCP_MODE) {
+  startMcpMode();
+} else {
+  let stateLoaded = false;
+  const earlyUrls: string[] = [];
 
-// One running copy: a second launch (or a basalt:// link) hands its arguments to this one.
-const primary = app.requestSingleInstanceLock();
-if (!primary) app.quit();
-app.on('second-instance', (_e, argv) => {
-  const url = uriArg(argv);
-  if (url) handleUrl(url);
-  else if (win) {
-    if (win.isMinimized()) win.restore();
-    win.focus();
-  }
-});
-// macOS delivers links here, including the one that launched the app.
-app.on('open-url', (e, url) => {
-  e.preventDefault();
-  if (stateLoaded) handleUrl(url);
-  else earlyUrls.push(url);
-});
-if (app.isPackaged) app.setAsDefaultProtocolClient('basalt');
-
-app.whenReady().then(async () => {
-  if (!primary) return;
-  await Promise.all([loadState(), loadAi(), sync.load()]);
-  app.setAboutPanelOptions({ applicationName: 'Basalt', applicationVersion: app.getVersion(), website: 'https://nabhyaraj-sonagara.github.io/Basalt/' });
-  session.defaultSession.setSpellCheckerEnabled(false);
-
-  // Attachments are served from the open hive only, with path validation.
-  protocol.handle('basalt-file', async (request) => {
-    try {
-      const h = requireHive();
-      const url = new URL(request.url);
-      const rel = safeRelPath(decodeURIComponent(url.pathname.replace(/^\/+/, '')));
-      return net.fetch(pathToFileURL(h.abs(rel)).toString());
-    } catch {
-      return new Response('Not found', { status: 404 });
+  // One running copy: a second launch (or a basalt:// link) hands its arguments to this one.
+  const primary = app.requestSingleInstanceLock();
+  if (!primary) app.quit();
+  app.on('second-instance', (_e, argv) => {
+    const url = uriArg(argv);
+    if (url) handleUrl(url);
+    else if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
     }
   });
-
-  if (!isDev) {
-    session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
-      cb({
-        responseHeaders: {
-          ...details.responseHeaders,
-          'Content-Security-Policy': [
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: basalt-file: https:; font-src 'self' data:; connect-src 'self' basalt-file:; frame-src 'none'; object-src 'none'; base-uri 'none'",
-          ],
-        },
-      });
-    });
-  }
-
-  registerIpc();
-  installMenu({ command: sendCommand, checkForUpdates: () => {
-    checkForUpdates();
-    sendCommand('show-updates');
-  }, isDev });
-  stateLoaded = true;
-  const launchUrl = uriArg(process.argv);
-  for (const url of [...earlyUrls, ...(launchUrl ? [launchUrl] : [])]) handleUrl(url);
-  createWindow();
-  void initUpdater((s) => broadcast('app:update', s));
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  // macOS delivers links here, including the one that launched the app.
+  app.on('open-url', (e, url) => {
+    e.preventDefault();
+    if (stateLoaded) handleUrl(url);
+    else earlyUrls.push(url);
   });
-});
+  if (app.isPackaged) app.setAsDefaultProtocolClient('basalt');
 
-app.on('window-all-closed', async () => {
-  await hive?.close();
-  if (process.platform !== 'darwin') app.quit();
-});
+  app.whenReady().then(async () => {
+    if (!primary) return;
+    await Promise.all([loadState(), loadAi(), sync.load()]);
+    app.setAboutPanelOptions({ applicationName: 'Basalt', applicationVersion: app.getVersion(), website: 'https://nabhyaraj-sonagara.github.io/Basalt/' });
+    session.defaultSession.setSpellCheckerEnabled(false);
+
+    // Attachments are served from the open hive only, with path validation.
+    protocol.handle('basalt-file', async (request) => {
+      try {
+        const h = requireHive();
+        const url = new URL(request.url);
+        const rel = safeRelPath(decodeURIComponent(url.pathname.replace(/^\/+/, '')));
+        return net.fetch(pathToFileURL(h.abs(rel)).toString());
+      } catch {
+        return new Response('Not found', { status: 404 });
+      }
+    });
+
+    if (!isDev) {
+      session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
+        cb({
+          responseHeaders: {
+            ...details.responseHeaders,
+            'Content-Security-Policy': [
+              "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: basalt-file: https:; font-src 'self' data:; connect-src 'self' basalt-file:; frame-src 'none'; object-src 'none'; base-uri 'none'",
+            ],
+          },
+        });
+      });
+    }
+
+    registerIpc();
+    installMenu({ command: sendCommand, checkForUpdates: () => {
+      checkForUpdates();
+      sendCommand('show-updates');
+    }, isDev });
+    stateLoaded = true;
+    const launchUrl = uriArg(process.argv);
+    for (const url of [...earlyUrls, ...(launchUrl ? [launchUrl] : [])]) handleUrl(url);
+    createWindow();
+    void initUpdater((s) => broadcast('app:update', s));
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+
+  app.on('window-all-closed', async () => {
+    await hive?.close();
+    if (process.platform !== 'darwin') app.quit();
+  });
+}

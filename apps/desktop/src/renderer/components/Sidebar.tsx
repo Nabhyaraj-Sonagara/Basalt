@@ -1,6 +1,9 @@
 import { LabeledToggle } from './LabeledToggle';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type JSX } from 'react';
-import { Button, HexAvatar, Icon, SearchField, Tag, TreeItem, EmptyState, type IconName } from '@basalt/ui';
+import { Button, Icon, SearchField, Tag, TreeItem, EmptyState, type IconName } from '@basalt/ui';
+import { HiveCrest } from './HiveCrest';
+import { useAppearance } from '../lib/appearance';
+import { commandById } from '../lib/commands';
 import { dirOf, isNote, type SearchResult, type TreeNode } from '@basalt/core/browser';
 import type { SemanticHit } from '@basalt/ai/types-only';
 import {
@@ -364,29 +367,32 @@ const VIEWS: { id: LeftView; icon: IconName; label: string }[] = [
 export function Sidebar() {
   const hive = useStore((s) => s.hive);
   const view = useStore((s) => s.leftView);
+  const identity = useStore((s) => s.hiveIdentity);
+  const look = useAppearance();
   const ref = useRef<HTMLElement>(null);
   if (!hive) return null;
+  const views = VIEWS.filter((v) => !look.hiddenViews.includes(v.id));
+  const tools = look.toolbar.map((id) => commandById(id)).filter((c): c is NonNullable<typeof c> => !!c && !!c.icon && c.id !== 'settings');
   return (
     <nav className="sidebar" ref={ref} aria-label="Hive">
       <div className="hive-head">
-        <HexAvatar name={hive.info.name} size={28} />
+        <button className="crest-btn" title="Change this hive's icon" onClick={() => setState({ settingsOpen: 'appearance' })}>
+          <HiveCrest name={hive.info.name} size={36} icon={identity.icon} color={identity.color} />
+        </button>
         <div className="hive-name">
           <b title={hive.info.root}>{hive.info.name}</b>
           <small>Hive · {hive.notes.length} notes</small>
         </div>
-        <Button size="sm" variant="quiet" icon="chevron" aria-label="Switch hive" onClick={() => void closeHive()} />
+        <Button size="sm" variant="quiet" icon="settings" aria-label="Settings" title="Settings" onClick={() => setState({ settingsOpen: 'editor' })} />
+        <Button size="sm" variant="quiet" icon="chevron" aria-label="Switch hive" title="Switch hive" onClick={() => void closeHive()} />
       </div>
       <div className="side-actions">
-        <Button size="sm" variant="quiet" icon="new-note" aria-label="New note" title="New note" onClick={() => void newNote()} />
-        <Button size="sm" variant="quiet" icon="folder" aria-label="New folder" title="New folder" onClick={() => promptNewFolder()} />
-        <Button size="sm" variant="quiet" icon="daily" aria-label="Today's daily note" title="Today's daily note" onClick={() => void openDailyNote()} />
-        <Button size="sm" variant="quiet" icon="comb" aria-label="Comb view" title="Comb view" onClick={() => openComb()} />
-        <Button size="sm" variant="quiet" icon="command" aria-label="Command palette" title="Command palette" onClick={() => setState({ palette: { mode: 'commands', query: '' } })} />
-        <span className="spacer" />
-        <Button size="sm" variant="quiet" icon="settings" aria-label="Settings" title="Settings" onClick={() => setState({ settingsOpen: 'editor' })} />
+        {tools.map((c) => (
+          <Button key={c.id} size="sm" variant="quiet" icon={c.icon!} aria-label={c.name} title={c.name} onClick={() => void c.run()} />
+        ))}
       </div>
       <div className="side-views" role="tablist" aria-label="Sidebar views">
-        {VIEWS.map((v) => (
+        {views.map((v) => (
           <button key={v.id} role="tab" aria-selected={view === v.id} className={`side-view${view === v.id ? ' on' : ''}`} title={v.label} onClick={() => (v.id === 'search' ? showSearch() : setState({ leftView: v.id }))}>
             <Icon name={v.icon} size={16} label={v.label} />
           </button>

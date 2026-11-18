@@ -18,7 +18,7 @@ const group = (prefix: string, names: string[]) => Object.fromEntries(names.map(
 const api: BasaltApi = {
   app: {
     ...(group('app', [
-      'recent', 'pickFolder', 'openHive', 'closeHive', 'sampleHivePath', 'openExternal', 'showInFolder', 'cliCommand', 'initialHive', 'info', 'popout',
+      'recent', 'pickFolder', 'openHive', 'saveTextFile', 'openTextFile', 'closeHive', 'sampleHivePath', 'openExternal', 'showInFolder', 'cliCommand', 'initialHive', 'info', 'popout',
       'setSpellcheck', 'takePendingUri', 'checkForUpdates', 'installUpdate', 'updateStatus',
     ]) as unknown as Omit<BasaltApi['app'], 'onUri' | 'onCommand' | 'onUpdate'>),
     onUri: (cb) => subscribe('app:uri', cb),
@@ -38,8 +38,9 @@ const api: BasaltApi = {
     ...(group('sync', ['status', 'setServer', 'signUp', 'signIn', 'signOut', 'usage', 'remoteHives', 'connect', 'disconnect', 'setPaused', 'now']) as unknown as Omit<BasaltApi['sync'], 'onStatus'>),
     onStatus: (cb) => subscribe('sync:status', cb),
   },
+  connect: group('connect', ['status', 'add', 'remove', 'launchCommand']) as unknown as BasaltApi['connect'],
   ai: {
-    ...(group('ai', ['presets', 'settings', 'saveProvider', 'removeProvider', 'setChatProvider', 'setEmbeddings', 'listModels', 'chat', 'cancel', 'semanticSearch', 'related', 'reindex']) as unknown as Omit<
+    ...(group('ai', ['signInOpenRouter', 'detectLocal', 'useLocal', 'presets', 'settings', 'saveProvider', 'removeProvider', 'setChatProvider', 'setEmbeddings', 'listModels', 'chat', 'cancel', 'semanticSearch', 'related', 'reindex']) as unknown as Omit<
       BasaltApi['ai'],
       'onChat' | 'onIndexProgress'
     >),

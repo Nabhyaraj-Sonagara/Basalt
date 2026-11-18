@@ -6,6 +6,7 @@ import type { SemanticHit } from '@basalt/ai/types-only';
 import { LocalComb } from './CombView';
 import { plainSnippet } from './Sidebar';
 import { Assistant } from './Assistant';
+import { useAppearance } from '../lib/appearance';
 import { api, errorToast, openPath } from '../lib/actions';
 import { activeTab, getState, noteTitle, setState, toast, useStore, type RightView } from '../lib/store';
 
@@ -226,7 +227,7 @@ function Related({ path }: { path: string }) {
   );
 }
 
-const PANELS: { id: RightView; icon: IconName; label: string }[] = [
+export const PANELS: { id: RightView; icon: IconName; label: string }[] = [
   { id: 'backlinks', icon: 'backlinks', label: 'Backlinks' },
   { id: 'outline', icon: 'note', label: 'Outline' },
   { id: 'properties', icon: 'tag', label: 'Properties' },
@@ -239,6 +240,8 @@ export function RightPanel() {
   const view = useStore((s) => s.rightView);
   const path = useActiveNotePath();
   const isNote = useStore((s) => activeTab(s)?.kind === 'note');
+  const hidden = useAppearance().hiddenPanels;
+  const panels = PANELS.filter((p) => !hidden.includes(p.id) || p.id === view);
   const body = () => {
     if (view === 'assistant') return <Assistant notePath={isNote ? path : null} />;
     if (view === 'comb') return <LocalComb path={path} />;
@@ -251,7 +254,7 @@ export function RightPanel() {
   return (
     <aside className="right-panel" aria-label="Note details">
       <div className="side-views" role="tablist" aria-label="Panels">
-        {PANELS.map((p) => (
+        {panels.map((p) => (
           <button key={p.id} role="tab" aria-selected={view === p.id} className={`side-view${view === p.id ? ' on' : ''}`} title={p.label} onClick={() => setState({ rightView: p.id })}>
             <Icon name={p.icon} size={16} label={p.label} />
           </button>

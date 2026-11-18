@@ -86,6 +86,8 @@ export interface State {
   expanded: Set<string>;
   snippets: { name: string; css: string }[];
   enabledSnippets: string[];
+  /** This hive's own icon (emoji) and colour, from .basalt/appearance.json. */
+  hiveIdentity: { icon?: string; color?: string };
   /** In a pop-out window: the note it shows. Pop-outs don't save the workspace layout. */
   popout: string | null;
 }
@@ -133,6 +135,7 @@ let state: State = {
   expanded: new Set(),
   snippets: [],
   enabledSnippets: [],
+  hiveIdentity: {},
   popout: null,
 };
 

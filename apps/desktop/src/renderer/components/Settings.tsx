@@ -3,8 +3,10 @@ import { Button, Kbd, Select, SettingRow, SettingsGroup, Toggle, Icon } from '@b
 import type { HiveSettings } from '@basalt/core/browser';
 import type { AiSettings, ProviderSettings, UpdateStatus } from '../../shared/api';
 import { SyncSection } from './SyncSettings';
+import { AppearanceSettings } from './AppearanceSettings';
+import { ConnectApps, QuickStart } from './ConnectSettings';
 import { COMMANDS, eventToHotkey, formatHotkey, hotkeyFor } from '../lib/commands';
-import { api, errorToast } from '../lib/actions';
+import { api, errorToast, saveHiveAppearance } from '../lib/actions';
 import { getState, setState, setTheme, toast, updateToast, dismissToast, useStore } from '../lib/store';
 
 const SECTIONS = [
@@ -14,7 +16,7 @@ const SECTIONS = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'hotkeys', label: 'Hotkeys' },
   { id: 'assistant', label: 'Assistant' },
-  { id: 'agents', label: 'Agents and CLI' },
+  { id: 'agents', label: 'AI apps and agents' },
   { id: 'sync', label: 'Sync' },
   { id: 'about', label: 'About and updates' },
 ];
@@ -105,20 +107,15 @@ function DailySection() {
 }
 
 function AppearanceSection() {
-  const theme = useStore((s) => s.theme);
   const snippets = useStore((s) => s.snippets);
   const enabled = useStore((s) => s.enabledSnippets);
   const setEnabled = (next: string[]) => {
-    setState({ enabledSnippets: next });
-    void api().hive.writeConfig('appearance.json', { enabledSnippets: next });
+    void saveHiveAppearance({ enabledSnippets: next });
   };
   return (
-    <>
-      <SettingsGroup title="Theme">
-        <SettingRow label="Theme" description="Comb is beeswax light. Basalt is cooled-stone dark.">
-          <Select value={theme} options={[{ value: 'comb', label: 'Comb (light)' }, { value: 'basalt', label: 'Basalt (dark)' }, { value: 'auto', label: 'Match the system' }]} onChange={(e) => setTheme(e.target.value as 'comb')} />
-        </SettingRow>
-      </SettingsGroup>
+    <AppearanceSettings
+      snippetsSection={
+        <>
       <SettingsGroup title="CSS snippets" description="CSS files in .basalt/snippets/ in this hive.">
         {snippets.length ? (
           snippets.map((sn) => (
@@ -137,7 +134,9 @@ function AppearanceSection() {
           </Button>
         </SettingRow>
       </SettingsGroup>
-    </>
+        </>
+      }
+    />
   );
 }
 
@@ -298,6 +297,7 @@ function AssistantSection() {
   const embedOptions = [{ value: 'builtin', label: 'Built in (offline, no setup)' }, ...ai.providers.filter((p) => p.embeddingModel).map((p) => ({ value: p.id, label: `${p.label} · ${p.embeddingModel}` }))];
   return (
     <>
+      <QuickStart onChange={setAi} />
       <SettingsGroup title="Models" description="Basalt works with Claude, OpenAI, Gemini and any OpenAI-compatible endpoint, including local models in Ollama and LM Studio.">
         <SettingRow label="Add a provider">
           <span className="hotkey-cell">
@@ -345,15 +345,18 @@ function AgentsSection() {
   const root = useStore((s) => s.hive!.info.root);
   const [cli, setCli] = useState('basalt');
   useEffect(() => void api().app.cliCommand().then(setCli), []);
-  const desktop = JSON.stringify({ mcpServers: { basalt: { command: 'node', args: [cli.replace(/^node "|"$/g, ''), 'mcp', '-H', root] } } }, null, 2);
+  const [launch, setLaunch] = useState<{ command: string; args: string[] } | null>(null);
+  useEffect(() => void api().connect.launchCommand().then(setLaunch), []);
+  const desktop = launch ? JSON.stringify({ mcpServers: { basalt: launch } }, null, 2) : '';
   return (
     <>
+      <ConnectApps />
       <SettingsGroup title="Connect an agent" description="Basalt's MCP server lets Claude Code, Claude Desktop and other agents search, read and edit this hive. It can't delete notes, and it reads .basalt/agents.md for your conventions.">
         <div className="agents-body">
-          <p>Claude Code</p>
+          <p>Any MCP client (Cursor, Windsurf, VS Code, …): Basalt starts itself as the server.</p>
+          {desktop ? <CopyBlock text={desktop} /> : null}
+          <p>With Node installed, you can use the CLI instead</p>
           <CopyBlock text={`claude mcp add basalt -- ${cli} mcp -H "${root}"`} />
-          <p>Claude Desktop and other MCP clients</p>
-          <CopyBlock text={desktop} />
         </div>
       </SettingsGroup>
       <SettingsGroup title="Command line" description="Every command takes --json for scripts and agents.">

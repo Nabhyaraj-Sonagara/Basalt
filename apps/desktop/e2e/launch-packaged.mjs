@@ -69,5 +69,10 @@ async function check(bin, port) {
 const bins = findBinaries();
 if (!bins.length) throw new Error(`No packaged app found in ${release}`);
 let port = 9400 + Math.floor(Math.random() * 400);
-for (const bin of bins) await check(bin, port++);
+for (const bin of bins) {
+  await check(bin, port++);
+  // The packaged app (fuses on) must also run as an MCP server for Claude Desktop, Claude Code and Codex.
+  const { execFileSync } = await import('node:child_process');
+  execFileSync(process.execPath, [join(root, 'apps/desktop/e2e/mcp-mode.mjs'), bin], { stdio: 'inherit', timeout: 120_000 });
+}
 process.exit(0);
