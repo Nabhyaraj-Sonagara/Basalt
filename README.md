@@ -60,9 +60,23 @@ Basalt opens an existing folder of Markdown notes as it is. App state lives in `
 
 ## Download
 
-Get Basalt for macOS, Windows or Linux from the [download page](https://nabhyaraj-sonagara.github.io/Basalt/) or the [latest release](https://github.com/Nabhyaraj-Sonagara/Basalt/releases/latest).
+**One line in a terminal** installs the latest version (run it again to update):
 
-Builds aren't code-signed yet, so the first launch needs one extra step:
+- **macOS and Linux:**
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Nabhyaraj-Sonagara/Basalt/main/install.sh | sh
+  ```
+
+- **Windows (PowerShell):**
+
+  ```powershell
+  irm https://raw.githubusercontent.com/Nabhyaraj-Sonagara/Basalt/main/install.ps1 | iex
+  ```
+
+The script picks the right build, checks it against the release's SHA-512 checksum and installs it: `Basalt.app` in Applications on macOS, the `.deb` on Debian and Ubuntu (it asks for your password), otherwise the AppImage with a `basalt` command and a menu entry (`BASALT_NO_SUDO=1` forces this). On macOS and Windows it also avoids the "unidentified developer" prompts below, because files fetched from a terminal aren't flagged as browser downloads. [install.sh](install.sh) and [install.ps1](install.ps1) are short; read them first if you like.
+
+Or download an installer from the [download page](https://nabhyaraj-sonagara.github.io/Basalt/) or the [latest release](https://github.com/Nabhyaraj-Sonagara/Basalt/releases/latest). Builds aren't code-signed yet, so opening a downloaded installer needs one extra step the first time:
 
 - **macOS:** open Basalt once, then go to **System Settings → Privacy & Security** and click **Open Anyway** next to the Basalt message.
 - **Windows:** on the SmartScreen prompt, click **More info → Run anyway**.

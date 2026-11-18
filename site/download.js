@@ -70,3 +70,21 @@
       document.getElementById('primary').href = RELEASES;
     });
 })();
+
+// Copy buttons for the one-line install commands.
+for (const btn of document.querySelectorAll('button.copy[data-copy]')) {
+  btn.addEventListener('click', async () => {
+    const text = document.getElementById(btn.dataset.copy)?.textContent ?? '';
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = 'Copied';
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById(btn.dataset.copy));
+      getSelection().removeAllRanges();
+      getSelection().addRange(range);
+      btn.textContent = 'Selected';
+    }
+    setTimeout(() => (btn.textContent = 'Copy'), 1500);
+  });
+}
