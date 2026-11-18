@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { Readable, Writable } from 'node:stream';
 import { z } from 'zod';
-import { CONFIG_DIR, type Hive } from '@basalt/core';
+import { CONFIG_DIR, parseMindmap, serializeMindmap, type Hive } from '@basalt/core';
 import { newNotePath, resolveNote, semanticIndex } from './notes';
 
 const VERSION = '0.1.0';
@@ -29,7 +29,7 @@ export function createMcpServer(hive: Hive): McpServer {
   const server = new McpServer(
     { name: 'basalt', version: VERSION },
     {
-      instructions: `Basalt hive "${hive.name}": a folder of linked Markdown notes. Read the hive_guide tool first for this hive's conventions. Link notes with [[Note name]]. Prefer append_to_note and set_properties over rewriting whole notes.`,
+      instructions: `Basalt hive "${hive.name}": a folder of linked Markdown notes. Read the hive_guide tool first for this hive's conventions. Link notes with [[Note name]]. Prefer append_to_note and set_properties over rewriting whole notes. To draw something, add a \`\`\`mermaid code block (flowchart, sequenceDiagram, pie, xychart-beta…) to a note, or make a mind map with create_mind_map; Basalt renders both.`,
     },
   );
   const ro = { readOnlyHint: true, openWorldHint: false } as const;
@@ -111,6 +111,27 @@ export function createMcpServer(hive: Hive): McpServer {
     'create_note',
     { title: 'Create note', description: 'Creates a note. Picks a free name if the path is taken. Optionally starts from a template note.', inputSchema: { path: z.string().describe('e.g. "Projects/New idea"'), content: z.string().optional(), template: z.string().optional() }, annotations: { destructiveHint: false, openWorldHint: false } },
     ({ path, content, template }) => guard(async () => ({ path: await hive.create(newNotePath(path), content ?? '', template ? { template: resolveNote(hive, template) } : {}) })),
+  );
+
+  server.registerTool(
+    'create_mind_map',
+    {
+      title: 'Create mind map',
+      description:
+        'Creates a mind-map note, which Basalt shows as an editable map. It is plain Markdown: frontmatter "view: mindmap", a "# Central idea" heading and a nested bulleted list (two spaces per level). Branches can contain [[links]].',
+      inputSchema: {
+        path: z.string().describe('e.g. "Projects/Launch map"'),
+        central: z.string().describe('The central idea'),
+        branches: z.string().describe('Nested Markdown list, e.g. "- Design\\n  - Sketches\\n- Build"'),
+      },
+      annotations: { destructiveHint: false, openWorldHint: false },
+    },
+    ({ path, central, branches }) =>
+      guard(async () => {
+        const root = parseMindmap(`# ${central}\n\n${branches}`, central);
+        if (!root.children.length) throw new Error('branches must be a bulleted list, one "- " item per line.');
+        return { path: await hive.create(newNotePath(path), serializeMindmap(root)), branches: root.children.length };
+      }),
   );
 
   server.registerTool(

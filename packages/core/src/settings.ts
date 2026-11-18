@@ -51,5 +51,6 @@ Agents and the Basalt assistant read this file before working in this hive. Edit
 - Notes are Markdown. Link notes with [[wikilinks]].
 - Put daily notes in \`Daily/\` named \`YYYY-MM-DD\`.
 - Use frontmatter properties for structured data (status, due, tags).
+- Draw diagrams and charts as \`\`\`mermaid code blocks. Mind maps are notes with \`view: mindmap\`, a \`# Central idea\` heading and a nested bulleted list.
 - Don't delete notes; ask first.
 `;

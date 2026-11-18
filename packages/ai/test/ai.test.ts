@@ -35,6 +35,9 @@ beforeAll(async () => {
         ev('message_delta', { delta: { stop_reason: 'end_turn', stop_sequence: null }, usage: { output_tokens: 2 } });
         ev('message_stop', {});
         res.end();
+      } else if (req.url?.startsWith('/gemini/models/')) {
+        res.writeHead(200, { 'content-type': 'text/event-stream' });
+        res.end(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: 'Gemini sees it' }] } }] })}\n\n`);
       } else if (req.url === '/v1/models') {
         res.writeHead(401, { 'content-type': 'application/json' });
         res.end(JSON.stringify({ error: { message: 'bad key' } }));
@@ -70,6 +73,29 @@ describe('providers', () => {
     const req = seen.find((s) => s.url!.startsWith('/v1/messages'))!;
     expect(req.body).toMatchObject({ model: 'claude-opus-5-5', fallbacks: 'default', output_config: { effort: 'medium' }, stream: true });
     expect(String(req.headers['anthropic-beta'])).toContain('server-side-fallback-2026-07-01');
+  });
+
+  it('sends pictures in each provider\'s format', async () => {
+    const img = { mediaType: 'image/png' as const, data: 'iVBORw0KGgo=' };
+    const messages = [{ role: 'user' as const, content: 'Draw this as a flowchart', images: [img] }];
+    seen.length = 0;
+    await collect(createProvider({ id: 'x', kind: 'openai-compatible', label: 'Local', baseUrl: `${base}/v1`, model: 'm' }).stream({ messages }));
+    expect(seen[0].body.messages[0].content).toEqual([
+      { type: 'text', text: 'Draw this as a flowchart' },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,iVBORw0KGgo=' } },
+    ]);
+    await collect(createProvider({ id: 'c', kind: 'anthropic', label: 'Claude', baseUrl: base, apiKey: 'k', model: 'claude-opus-5-5' }).stream({ messages }));
+    expect(seen[1].body.messages[0].content).toEqual([
+      { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'iVBORw0KGgo=' } },
+      { type: 'text', text: 'Draw this as a flowchart' },
+    ]);
+    const g = createProvider({ id: 'g', kind: 'gemini', label: 'Gemini', baseUrl: `${base}/gemini`, apiKey: 'k', model: 'gemini-x' });
+    expect(await collect(g.stream({ messages }))).toBe('Gemini sees it');
+    expect(seen[2].url).toBe('/gemini/models/gemini-x:streamGenerateContent?alt=sse');
+    expect(seen[2].body.contents[0].parts).toEqual([{ inlineData: { mimeType: 'image/png', data: 'iVBORw0KGgo=' } }, { text: 'Draw this as a flowchart' }]);
+    // Plain text messages stay plain strings.
+    await collect(createProvider({ id: 'x', kind: 'openai-compatible', label: 'Local', baseUrl: `${base}/v1`, model: 'm' }).stream({ messages: [{ role: 'user', content: 'hi' }] }));
+    expect(seen[3].body.messages[0]).toEqual({ role: 'user', content: 'hi' });
   });
 
   it('turns HTTP errors into readable messages', async () => {

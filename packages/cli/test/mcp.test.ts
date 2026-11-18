@@ -39,7 +39,7 @@ describe('basalt mcp', () => {
   it('lists its tools', async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ['append_to_note', 'create_note', 'daily_note', 'get_backlinks', 'get_outgoing_links', 'hive_guide', 'list_notes', 'list_tags', 'query_notes', 'read_note', 'related_notes', 'rename_note', 'search_notes', 'semantic_search', 'set_properties', 'write_note'].sort(),
+      ['append_to_note', 'create_mind_map', 'create_note', 'daily_note', 'get_backlinks', 'get_outgoing_links', 'hive_guide', 'list_notes', 'list_tags', 'query_notes', 'read_note', 'related_notes', 'rename_note', 'search_notes', 'semantic_search', 'set_properties', 'write_note'].sort(),
     );
     expect(tools.find((t) => t.name === 'read_note')?.annotations?.readOnlyHint).toBe(true);
   });
@@ -64,6 +64,13 @@ describe('basalt mcp', () => {
     // [[Ideas]] in Welcome still resolves by name after the move, so nothing needs rewriting.
     expect(ren.data.updated).toEqual([]);
     expect((await call('get_backlinks', { note: 'Inbox/Ideas' })).data.map((b: any) => b.source)).toContain('Welcome.md');
+  });
+
+  it('creates a mind map as a plain Markdown outline', async () => {
+    const res = await call('create_mind_map', { path: 'Maps/Launch', central: 'Launch', branches: '- Design\n  - [[Welcome]]\n- Build' });
+    expect(res.data).toEqual({ path: 'Maps/Launch.md', branches: 2 });
+    expect(readFileSync(join(dir, 'Maps/Launch.md'), 'utf8')).toBe('---\nview: mindmap\n---\n# Launch\n\n- Design\n  - [[Welcome]]\n- Build\n');
+    expect((await call('create_mind_map', { path: 'Empty', central: 'x', branches: 'no list' })).isError).toBe(true);
   });
 
   it('refuses to escape the hive and needs overwrite to replace', async () => {

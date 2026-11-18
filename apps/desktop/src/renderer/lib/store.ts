@@ -15,6 +15,8 @@ export interface Tab {
   hIndex: number;
   /** Line to scroll to on open. */
   line?: number;
+  /** Mind-map notes: show the Markdown instead of the map. */
+  mapText?: boolean;
   /** For table views: the query. */
   query?: string;
 }
@@ -75,6 +77,8 @@ export interface State {
   palette: { mode: PaletteMode; query: string; payload?: string } | null;
   settingsOpen: string | null;
   recoveryFor: string | null;
+  /** The Illustrate dialog: what to start from. */
+  illustrate: { source: 'note' | 'sketch' | 'picture'; kind?: 'mindmap' | 'flowchart' | 'sequence' | 'chart' } | null;
   toasts: Toast[];
   prompt: PromptState | null;
   bookmarks: Bookmark[];
@@ -125,6 +129,7 @@ let state: State = {
   palette: null,
   settingsOpen: null,
   recoveryFor: null,
+  illustrate: null,
   toasts: [],
   prompt: null,
   bookmarks: [],

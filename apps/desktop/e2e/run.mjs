@@ -5,6 +5,7 @@ import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 
 const { _electron: electron } = createRequire(import.meta.url)('playwright');
 const root = resolve(import.meta.dirname, '../../..');
@@ -22,11 +23,33 @@ const userData = mkdtempSync(join(tmpdir(), 'basalt-ud-'));
 // A fake home folder, so "Connect" writes AI app configs there and never to the real ones.
 const fakeHome = mkdtempSync(join(tmpdir(), 'basalt-home-'));
 mkdirSync(join(fakeHome, '.codex'));
+// A stand-in for a local Ollama server with a model that can see pictures.
+const modelRequests = [];
+const fakeModel = createServer((req, res) => {
+  let raw = '';
+  req.on('data', (c) => (raw += c));
+  req.on('end', () => {
+    if (req.url === '/api/tags') return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ models: [{ name: 'llava:13b' }] }));
+    if (req.url === '/v1/chat/completions') {
+      const body = JSON.parse(raw);
+      modelRequests.push(body);
+      const system = body.messages[0].content;
+      const answer = /mind map/i.test(system) ? '# Welcome\n\n- Try things\n  - Comb view\n- Install' : 'Here it is:\n```mermaid\nflowchart TD\n  A["Idea"] --> B["Ship"]\n```';
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: answer } }] })}\n\n`);
+      return res.end('data: [DONE]\n\n');
+    }
+    res.writeHead(404).end();
+  });
+});
+await new Promise((r) => fakeModel.listen(0, '127.0.0.1', r));
+const fakeModelUrl = `http://127.0.0.1:${fakeModel.address().port}`;
+
 const launch = (extra) =>
   electron.launch({
     executablePath: createRequire(import.meta.url)('electron'),
     args: [join(root, 'apps/desktop'), '--no-sandbox', `--user-data-dir=${userData}`, ...extra],
-    env: { ...process.env, BASALT_NO_UPDATES: '1', BASALT_CONNECT_HOME: fakeHome, XDG_CONFIG_HOME: join(fakeHome, '.config'), CODEX_HOME: join(fakeHome, '.codex') },
+    env: { ...process.env, BASALT_NO_UPDATES: '1', BASALT_CONNECT_HOME: fakeHome, XDG_CONFIG_HOME: join(fakeHome, '.config'), CODEX_HOME: join(fakeHome, '.codex'), BASALT_OLLAMA_URL: fakeModelUrl, BASALT_LMSTUDIO_URL: 'http://127.0.0.1:9' },
   });
 let app = await launch([`--hive=${hive}`]);
 let page = await app.firstWindow();
@@ -41,7 +64,9 @@ async function step(name, fn) {
     await fn();
     results.push(['ok', name]);
   } catch (e) {
-    results.push(['FAIL', name, e.message.split('\n')[0]]);
+    // First line, plus Playwright's reason when an action kept retrying (covered, moving, hidden…).
+    const why = e.message.split('\n').filter((l) => /intercepts pointer|not stable|not visible|outside of the viewport|detached/.test(l)).slice(-2).map((l) => l.trim());
+    results.push(['FAIL', name, [e.message.split('\n')[0], ...why].join(' | ')]);
     await shot(`fail-${name.replace(/\W+/g, '-')}`).catch(() => {});
   }
 }
@@ -299,6 +324,128 @@ await step('connect Codex to the hive with one click', async () => {
   assert.match(toml, /--mcp/);
   await page.screenshot({ path: join(out, '17-connect-apps.png') });
   await page.keyboard.press('Escape');
+});
+
+// Toasts sit over the lower right of the window; close them before clicking around a canvas.
+const clearToasts = async () => {
+  for (const b of await page.locator('.bs-toast-close').all()) await b.click().catch(() => {});
+};
+
+await step('mind map: new map, branches by keyboard, saved as Markdown', async () => {
+  await clearToasts();
+  await palette('New mind map');
+  await page.waitForSelector('.mm-node.depth-0');
+  assert.equal(await page.inputValue('.note-title'), 'Mind map');
+  await page.locator('.mm-node.depth-0').click();
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('Sketches');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('[[Welcome]]');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('Read it');
+  await page.keyboard.press('Enter');
+  // Rename by typing over a selected branch.
+  await page.locator('.mm-node', { hasText: 'Sketches' }).click();
+  await page.keyboard.press('F2');
+  await page.keyboard.press(`${mod}+A`);
+  await page.keyboard.type('Drawings');
+  await page.keyboard.press('Enter');
+  await sleep(700);
+  const md = read('Mind map.md');
+  assert.match(md, /^view: mindmap$/m);
+  assert.match(md, /^# Mind map$/m);
+  assert.match(md, /^- First branch\n- Drawings\n- \[\[Welcome\]\]\n  - Read it$/m);
+  assert.equal(await page.locator('.mm-link').count(), 1);
+  await sleep(200);
+  await shot('18-mind-map');
+});
+
+await step('mind map: folds, deletes and switches to the Markdown', async () => {
+  await clearToasts();
+  await page.locator('.mm-node', { hasText: 'Drawings' }).click();
+  await page.keyboard.press('ArrowDown');
+  assert.equal(await page.locator('.mm-node.selected .mm-link').innerText(), 'Welcome');
+  await page.keyboard.press(' ');
+  assert.equal(await page.locator('.mm-node', { hasText: 'Read it' }).count(), 0);
+  await page.locator('.mm-more').click({ timeout: 5001 });
+  await page.locator('.mm-node', { hasText: 'First branch' }).click({ timeout: 5002 });
+  await page.keyboard.press('Delete');
+  await sleep(600);
+  assert.doesNotMatch(read('Mind map.md'), /First branch/);
+  await page.locator('.note-mode button:has-text("Text")').click({ timeout: 5003 });
+  await page.waitForSelector('.cm-content');
+  assert.match(await page.locator('.cm-content').innerText(), /Drawings/);
+  await page.locator('.note-mode button:has-text("Map")').click();
+  await page.waitForSelector('.mm-node.depth-0');
+});
+
+await step('create a mind map from a note', async () => {
+  await page.keyboard.press(`${mod}+O`);
+  await page.keyboard.type('Welcome');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('.cm-content');
+  await palette('Create a mind map from this note');
+  await page.waitForSelector('.mm-node.depth-0');
+  assert.equal(await page.inputValue('.note-title'), 'Welcome map');
+  assert.ok(await page.locator('.mm-node', { hasText: 'What to try' }).isVisible());
+  const md = read('Welcome map.md');
+  assert.match(md, /^# Welcome to your hive\n\n- What to try\n  - Open the comb view/m);
+  assert.match(md, /- Open the comb view/);
+  await shot('19-mind-map-from-note');
+});
+
+await step('illustrate a sketch into a flowchart with a local model', async () => {
+  await page.keyboard.press(`${mod}+,`);
+  await page.locator('.settings-nav button:text("Assistant")').click();
+  const local = page.locator('.bs-setting', { hasText: 'Ollama' }).first();
+  await local.locator('button:has-text("Use")').click();
+  await page.getByText('Using llava:13b in Ollama').waitFor({ timeout: 5000 });
+  await page.keyboard.press('Escape');
+  await page.keyboard.press(`${mod}+O`);
+  await page.keyboard.type('Welcome');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('.cm-content');
+  await page.locator('.cm-content').click();
+  await page.keyboard.press(`${mod}+End`);
+  await palette('Illustrate a sketch or photo');
+  const pad = page.locator('canvas.sketch-canvas');
+  const box = await pad.boundingBox();
+  await page.mouse.move(box.x + 60, box.y + 60);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(box.x + 60 + i * 25, box.y + 60 + i * 12);
+  await page.mouse.up();
+  await page.locator('.dialog-illustrate select').selectOption('flowchart');
+  await shot('20-illustrate-sketch');
+  await page.locator('.dialog-illustrate button:has-text("Illustrate")').last().click();
+  await page.waitForSelector('.dialog-illustrate', { state: 'detached', timeout: 15000 });
+  await sleep(800);
+  const sent = modelRequests.at(-1);
+  assert.equal(sent.model, 'llava:13b');
+  assert.match(sent.messages[1].content[1].image_url.url, /^data:image\/png;base64,/);
+  const md = read('Welcome.md');
+  assert.match(md, /```mermaid\nflowchart TD\n  A\["Idea"\] --> B\["Ship"\]\n```/);
+  const pic = /!\[\[(Attachments\/Sketch [^\]]+\.png)\]\]/.exec(md);
+  assert.ok(pic, 'the sketch is saved and embedded');
+  assert.ok(existsSync(join(hive, pic[1])));
+  await page.keyboard.press(`${mod}+E`);
+  await page.waitForSelector('.reading .mermaid-block svg', { timeout: 15000 });
+  await page.locator('.reading .mermaid-block').scrollIntoViewIfNeeded();
+  await shot('21-illustrated-flowchart');
+  await page.keyboard.press(`${mod}+E`);
+});
+
+await step('ask the assistant to map a note', async () => {
+  await palette('Ask the assistant to illustrate this note');
+  assert.equal(await page.locator('.dialog-illustrate select').inputValue(), 'mindmap');
+  await page.locator('.dialog-illustrate button:has-text("Illustrate")').last().click();
+  await page.waitForSelector('.mm-node.depth-0', { timeout: 15000 });
+  assert.equal(await page.inputValue('.note-title'), 'Welcome map 1');
+  const md = read('Welcome map 1.md');
+  assert.match(md, /^source: "\[\[Welcome\]\]"$/m);
+  assert.match(md, /^- Try things\n  - Comb view\n- Install$/m);
+  assert.match(modelRequests.at(-1).messages[1].content, /Welcome to your hive/);
 });
 
 await step('no renderer errors', async () => {

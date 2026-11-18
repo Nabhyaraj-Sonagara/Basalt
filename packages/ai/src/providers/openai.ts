@@ -18,7 +18,14 @@ export class OpenAIProvider implements ChatProvider {
   }
 
   async *stream(req: ChatRequest): AsyncIterable<string> {
-    const messages = [...(req.system ? [{ role: 'system', content: req.system }] : []), ...req.messages];
+    const messages = [
+      ...(req.system ? [{ role: 'system', content: req.system }] : []),
+      ...req.messages.map((m) =>
+        m.images?.length
+          ? { role: m.role, content: [{ type: 'text', text: m.content }, ...m.images.map((i) => ({ type: 'image_url', image_url: { url: `data:${i.mediaType};base64,${i.data}` } }))] }
+          : { role: m.role, content: m.content },
+      ),
+    ];
     const res = await fetch(`${this.baseUrl}/chat/completions`, {
       method: 'POST',
       headers: this.headers(),

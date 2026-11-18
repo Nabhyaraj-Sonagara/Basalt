@@ -9,10 +9,12 @@ import {
   buildSystemPrompt,
   createEmbedder,
   createProvider,
+  extractIllustration,
+  illustrationPrompt,
   type ProviderConfig,
   type SemanticHit,
 } from '@basalt/ai';
-import type { AiSettings, AppInfo, ChatStart, ConnectClientId, HiveChange, HiveSnapshot, NoteSummary, ProviderSettings, UriRequest } from '../shared/api';
+import type { AiSettings, AppInfo, ChatStart, IllustrateRequest, ConnectClientId, HiveChange, HiveSnapshot, NoteSummary, ProviderSettings, UriRequest } from '../shared/api';
 import { editableContextMenu, installMenu } from './menu';
 import { checkForUpdates, initUpdater, installUpdate, updateStatus } from './updater';
 import { SyncController } from './sync';
@@ -88,6 +90,7 @@ function summaries(h: Hive): NoteSummary[] {
     blocks: n.blocks.map((b) => b.id),
     mtime: n.mtime,
     wordCount: n.wordCount,
+    view: typeof n.frontmatter.view === 'string' ? n.frontmatter.view : undefined,
   }));
 }
 
@@ -223,6 +226,37 @@ async function runChat(req: ChatStart, to: Electron.WebContents) {
     else send({ type: 'error', message: (err as Error).message });
   } finally {
     chats.delete(req.id);
+  }
+}
+
+const illustrations = new Map<string, AbortController>();
+
+/** One answer from the chat model: a mind-map outline or Mermaid source for a note or a picture. */
+async function illustrate(req: IllustrateRequest): Promise<{ text: string }> {
+  const h = requireHive();
+  const id = req.providerId ?? ai.chatProvider;
+  if (!id) throw new Error('Set up a model in Settings → Assistant first.');
+  const cfg = providerConfig(id);
+  if (!cfg.model) throw new Error(`Pick a model for ${cfg.label} in Settings → Assistant.`);
+  const note = req.notePath && h.exists(req.notePath) ? await h.read(req.notePath) : undefined;
+  const title = req.notePath ? h.notes.get(req.notePath)?.title : undefined;
+  const { system, user } = illustrationPrompt({ kind: req.kind, title, text: note, hasImage: !!req.image, instructions: req.instructions });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 180_000);
+  if (req.id) illustrations.set(req.id, ctrl);
+  try {
+    let out = '';
+    const messages = [{ role: 'user' as const, content: user, ...(req.image ? { images: [req.image] } : {}) }];
+    for await (const t of createProvider(cfg).stream({ system, messages, maxTokens: 8000, signal: ctrl.signal })) out += t;
+    return { text: extractIllustration(req.kind, out) };
+  } catch (err) {
+    if (ctrl.signal.aborted) throw new Error(req.id && !illustrations.has(req.id) ? 'Cancelled.' : 'The model took too long to answer.');
+    const msg = (err as Error).message;
+    if (req.image && /image|vision|multimodal|modalit/i.test(msg)) throw new Error(`${cfg.label} (${cfg.model}) can't read pictures. Pick a model that can see images in Settings → Assistant. ${msg}`);
+    throw err;
+  } finally {
+    clearTimeout(timer);
+    if (req.id) illustrations.delete(req.id);
   }
 }
 
@@ -485,6 +519,12 @@ function registerIpc() {
     void runChat(req, this.sender);
   });
   handle('ai:cancel', (id: string) => chats.get(id)?.abort());
+  handle('ai:illustrate', (req: IllustrateRequest) => illustrate(req));
+  handle('ai:cancelIllustrate', (id: string) => {
+    const c = illustrations.get(id);
+    illustrations.delete(id);
+    c?.abort();
+  });
   handle('ai:semanticSearch', async (q: string) => (await semanticIndex()).search(String(q), 20));
   handle('ai:related', async (p: string, unlinkedOnly?: boolean) => (await semanticIndex()).related(p, 8, !!unlinkedOnly));
   handle('ai:reindex', async () => {
