@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { deriveKeys, hiveKeys, open, openMeta, pathId, randomKey, seal, sealMeta } from '../src/crypto';
-import { isSynced } from '../src/fs';
+import { isSynced, syncsFile } from '../src/fs';
 
 const FAST = { N: 2 ** 10, r: 8, p: 1 };
 
@@ -47,6 +47,15 @@ describe('sync crypto', () => {
     for (const p of ['Note.md', '.basalt/settings.json', '.basalt/agents.md', 'Attachments/a.png']) expect(isSynced(p)).toBe(true);
     for (const p of ['.basalt/index/x.json', '.basalt/workspace.json', '.basalt/snapshots/a', '.git/HEAD', 'a/.DS_Store', 'Note.md.123.456.tmp', 'Note.md.basalt-sync.tmp', '.obsidian/app.json']) {
       expect(isSynced(p)).toBe(false);
+    }
+  });
+
+  it('syncs notes and their text files, not attachments', () => {
+    for (const p of ['Note.md', 'Maps/Plan.MD', 'Board.canvas', 'Pages/home.html', 'Pages/style.css', '.basalt/settings.json', '.basalt/plugins/goal/main.js', 'diagram.svg']) {
+      expect(syncsFile(p)).toBe(true);
+    }
+    for (const p of ['Attachments/a.png', 'scan.pdf', 'clip.mp4', 'song.mp3', 'archive.zip', 'README', '.env', 'notes.md.basalt-sync.tmp', '.basalt/workspace.json']) {
+      expect(syncsFile(p)).toBe(false);
     }
   });
 });

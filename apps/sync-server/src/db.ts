@@ -42,6 +42,15 @@ const MIGRATIONS: string[] = [
      PRIMARY KEY (hive_id, path_id)
    );
    CREATE INDEX IF NOT EXISTS files_seq ON files(hive_id, seq);`,
+  // 2: per-account file counts and daily transfer, for the notes-only limits.
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS file_count integer NOT NULL DEFAULT 0;
+   UPDATE users u SET file_count = (SELECT count(*) FROM files f JOIN hives h ON h.id = f.hive_id WHERE h.user_id = u.id AND NOT f.deleted);
+   CREATE TABLE IF NOT EXISTS transfer (
+     user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     day date NOT NULL,
+     bytes bigint NOT NULL DEFAULT 0,
+     PRIMARY KEY (user_id, day)
+   );`,
 ];
 
 export type Db = pg.Pool;

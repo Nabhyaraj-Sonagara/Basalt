@@ -2,7 +2,9 @@
 {$SYNC_DOMAIN} {
 	encode zstd gzip
 	request_body {
-		max_size 110MB
+		# Sync is for notes. Keep this a little above MAX_FILE_BYTES (2 MiB by default) so the
+		# server can answer oversized uploads with a clear message.
+		max_size 8MB
 	}
 	reverse_proxy sync:8080 {
 		# Keep server-sent event streams open.

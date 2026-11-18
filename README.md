@@ -53,8 +53,9 @@ Basalt is a local-first Markdown notes app built so AI can work with your notes 
 
 **Sync across devices**
 - **End-to-end encrypted sync** through a server you run. Notes, file names and hive names are encrypted on your device before upload, so the server can't read them. Edits merge automatically; if a note changed on two devices at once, both versions are kept.
+- Sync is for notes: Markdown, mind maps, canvases, HTML pages and Basalt's settings and plugins travel; images, PDFs and other attachments stay on the device they were added on. The server enforces small limits (2 MB per note, 100 MB per account by default).
 - Sign up and connect a hive in **Settings → Sync**. The status bar shows whether you're synced, offline or paused.
-- The server (`apps/sync-server`) runs on one small cloud machine with Docker. See [deploying sync on AWS](deploy/aws/README.md).
+- The server (`apps/sync-server`) runs on one small cloud machine with Docker; one command sets it up. See [deploying sync on AWS](deploy/aws/README.md).
 
 Basalt opens an existing folder of Markdown notes as it is. App state lives in `.basalt/` inside the hive; your notes stay plain Markdown. See [format compatibility](docs/research/format-compat.md).
 
@@ -177,7 +178,7 @@ In the app, **Settings → Agents and CLI** shows these commands already filled 
 | `packages/ui` | The Basalt design system for React, with tokens generated from `design-system/project/tokens.json` |
 | `apps/desktop` | The Electron app: main process, sandboxed preload and React renderer |
 | `apps/sync-server` | The sync server (Node, Postgres, disk or S3 storage) and its Docker image |
-| `deploy/aws` | Docker Compose, HTTPS and backups for running the sync server on EC2 |
+| `deploy/aws` | Setup script, Docker Compose, HTTPS and backups for running the sync server on EC2 |
 | `design-system/` | The Basalt design system |
 | `fixtures/sample-hive` | A sample hive, used by the tests and offered on the start screen |
 | `docs/` | Feature inventory, format notes and the security audit |

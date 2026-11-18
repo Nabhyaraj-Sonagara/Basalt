@@ -152,6 +152,21 @@ jobs:
           out=$(docker run --rm basalt-sync:ci 2>&1 || true)
           echo "$out"
           echo "$out" | grep -q "Set DATABASE_URL"
+      - name: deploy/aws/setup.sh brings up the whole stack with this image
+        run: |
+          dir="$RUNNER_TEMP/basalt"
+          sudo SYNC_IMAGE=basalt-sync:ci BASALT_DIR="$dir" BASALT_SRC="file://$PWD/deploy/aws" sh deploy/aws/setup.sh sync.basalt.test | tee "$RUNNER_TEMP/setup.log"
+          grep -q "Basalt Sync is running" "$RUNNER_TEMP/setup.log"
+          sudo grep -qE '^SERVER_SECRET=[0-9a-f]{64}$' "$dir/.env"
+          test "$(sudo stat -c %a "$dir/.env")" = 600
+          # Through Caddy, with its internal certificate standing in for Let's Encrypt.
+          sudo sed -i 's/^\tencode zstd gzip$/\ttls internal\n\tencode zstd gzip/' "$dir/Caddyfile"
+          (cd "$dir" && sudo docker compose restart caddy && sleep 5 && sudo docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt "$RUNNER_TEMP/root.crt")
+          c() { curl -sS --cacert "$RUNNER_TEMP/root.crt" --resolve sync.basalt.test:443:127.0.0.1 "$@"; }
+          c https://sync.basalt.test/healthz | grep -q '"ok":true'
+          code=$(head -c 9000000 /dev/zero | c -X PUT --data-binary @- -o /dev/null -w '%{http_code}' https://sync.basalt.test/v1/hives/x/files/y)
+          test "$code" = 413
+          echo "setup.sh stack is healthy over HTTPS and refuses oversized uploads"
 
   package:
     name: Package (${{ matrix.os }})

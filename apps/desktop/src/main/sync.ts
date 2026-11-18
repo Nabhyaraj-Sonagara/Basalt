@@ -44,6 +44,7 @@ export class SyncController {
   private status: Omit<SyncStatus, 'server' | 'email' | 'signedIn' | 'keychain' | 'linked'> = { state: 'off', lastSync: null, error: null, conflicts: [] };
   private stopFns: (() => void)[] = [];
   private debounce: NodeJS.Timeout | null = null;
+  private cycleSkipped: string[] = [];
 
   constructor(private readonly notify: (s: SyncStatus) => void) {}
 
@@ -164,10 +165,10 @@ export class SyncController {
     return this.getStatus();
   }
 
-  async usage(): Promise<{ usageBytes: number; quotaBytes: number } | null> {
+  async usage(): Promise<{ usageBytes: number; quotaBytes: number; maxFileBytes?: number } | null> {
     try {
       const me = await this.client().me();
-      return { usageBytes: me.usageBytes, quotaBytes: me.quotaBytes };
+      return { usageBytes: me.usageBytes, quotaBytes: me.quotaBytes, maxFileBytes: me.maxFileBytes };
     } catch {
       return null;
     }
@@ -243,10 +244,13 @@ export class SyncController {
       return;
     }
     let hiveKey: Buffer;
+    let maxFileBytes: number | undefined;
     try {
       const remote = (await listHives(this.client(), this.accountKey())).find((h) => h.id === link.hiveId);
       if (!remote) throw new Error('The remote hive was deleted. Connect this hive again in Settings → Sync.');
       hiveKey = remote.hiveKey;
+      // The server's size limit, so oversized notes are skipped here instead of refused there.
+      maxFileBytes = (await this.client().me()).maxFileBytes;
     } catch (err) {
       this.fail(err);
       // Try again in a minute (for example when the network comes back).
@@ -261,8 +265,10 @@ export class SyncController {
       hiveKey,
       fs: new NodeSyncFs(hive.root),
       store: new JsonStateStore(stateFile),
+      maxFileBytes,
       onEvent: (e: SyncEvent) => {
         if (e.type === 'conflict') this.update({ conflicts: [...this.status.conflicts, e.copy] });
+        if (e.type === 'skipped' && !this.cycleSkipped.includes(e.path)) this.cycleSkipped.push(e.path);
       },
     });
     this.engine = engine;
@@ -304,9 +310,10 @@ export class SyncController {
     const engine = this.engine;
     if (!engine) return this.getStatus();
     this.update({ state: 'syncing' });
+    this.cycleSkipped = [];
     try {
       await engine.run();
-      if (this.engine === engine) this.update({ state: 'idle', lastSync: Date.now(), error: null });
+      if (this.engine === engine) this.update({ state: 'idle', lastSync: Date.now(), error: null, skipped: [...this.cycleSkipped] });
     } catch (err) {
       if (this.engine === engine) this.fail(err);
     }

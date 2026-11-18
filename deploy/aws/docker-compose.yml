@@ -1,15 +1,25 @@
 name: basalt
 # Basalt Sync on one server: the sync API, Postgres, and Caddy for HTTPS.
-# Usage: cp .env.example .env, edit it, then: docker compose up -d
+# Usage: cp .env.example .env, edit it, then: docker compose up -d   (or run setup.sh, which does both)
+x-logging: &logging
+  # Keep container logs from filling the disk.
+  driver: json-file
+  options: { max-size: 10m, max-file: '3' }
+
 services:
   sync:
     image: ${SYNC_IMAGE:-ghcr.io/nabhyaraj-sonagara/basalt-sync:latest}
     restart: unless-stopped
+    logging: *logging
     environment:
       DATABASE_URL: postgres://basalt:${POSTGRES_PASSWORD}@db:5432/basalt
       SERVER_SECRET: ${SERVER_SECRET}
-      QUOTA_BYTES: ${QUOTA_BYTES:-1073741824}
-      MAX_FILE_BYTES: ${MAX_FILE_BYTES:-104857600}
+      # Notes-only limits; see .env.example.
+      QUOTA_BYTES: ${QUOTA_BYTES:-104857600}
+      MAX_FILE_BYTES: ${MAX_FILE_BYTES:-2097152}
+      MAX_FILES: ${MAX_FILES:-20000}
+      TRANSFER_BYTES_PER_DAY: ${TRANSFER_BYTES_PER_DAY:-1073741824}
+      MAX_USERS: ${MAX_USERS:-100}
       ALLOW_SIGNUP: ${ALLOW_SIGNUP:-true}
       TRUST_PROXY: 'true'
       S3_BUCKET: ${S3_BUCKET:-}
@@ -23,6 +33,7 @@ services:
   db:
     image: postgres:17-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       POSTGRES_USER: basalt
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -38,6 +49,7 @@ services:
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
+    logging: *logging
     ports:
       - '80:80'
       - '443:443'

@@ -121,6 +121,8 @@ export interface SyncStatus {
   error: string | null;
   /** Conflict copies made this session (hive paths). */
   conflicts: string[];
+  /** Notes the last sync left out, usually for being over the server's size limit (hive paths). */
+  skipped?: string[];
 }
 
 export type ConnectClientId = 'claude-desktop' | 'claude-code' | 'codex';
@@ -217,7 +219,7 @@ export interface BasaltApi {
     signUp(email: string, password: string): Promise<SyncStatus>;
     signIn(email: string, password: string): Promise<SyncStatus>;
     signOut(): Promise<SyncStatus>;
-    usage(): Promise<{ usageBytes: number; quotaBytes: number } | null>;
+    usage(): Promise<{ usageBytes: number; quotaBytes: number; maxFileBytes?: number } | null>;
     remoteHives(): Promise<{ id: string; name: string }[]>;
     /** Links the open hive to a remote hive, or to a new one when `remoteId` is null. */
     connect(remoteId: string | null): Promise<SyncStatus>;

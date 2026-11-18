@@ -125,7 +125,7 @@ function Connect() {
 
 export function SyncSection() {
   const status = useSyncStatus();
-  const [usage, setUsage] = useState<{ usageBytes: number; quotaBytes: number } | null>(null);
+  const [usage, setUsage] = useState<{ usageBytes: number; quotaBytes: number; maxFileBytes?: number } | null>(null);
   useEffect(() => {
     if (status?.signedIn) void api().sync.usage().then(setUsage);
   }, [status?.signedIn, status?.lastSync]);
@@ -134,7 +134,7 @@ export function SyncSection() {
   const when = status.lastSync ? new Date(status.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
   return (
     <>
-      <SettingsGroup title="Sync" description={`Signed in as ${status.email} on ${status.server.replace(/^https?:\/\//, '')}. Notes are encrypted on this computer before upload.`}>
+      <SettingsGroup title="Sync" description={`Signed in as ${status.email} on ${status.server.replace(/^https?:\/\//, '')}. Notes are encrypted on this computer before upload. Sync carries notes, canvases and pages; images, PDFs and other attachments stay on each device.`}>
         {status.linked ? (
           <>
             <SettingRow
@@ -152,6 +152,27 @@ export function SyncSection() {
               <SettingRow label="Conflicts" description="These notes changed on two devices at once. Each copy holds the version from this computer; compare and delete the one you don't need.">
                 <div className="sync-conflicts">
                   {status.conflicts.map((p) => (
+                    <button
+                      key={p}
+                      className="plain"
+                      onClick={() => {
+                        setState({ settingsOpen: null });
+                        openPath(p);
+                      }}
+                    >
+                      {noteTitle(p)}
+                    </button>
+                  ))}
+                </div>
+              </SettingRow>
+            ) : null}
+            {status.skipped?.length ? (
+              <SettingRow
+                label="Not synced"
+                description={`These files are over the server's ${usage?.maxFileBytes ? `${mb(usage.maxFileBytes)} ` : ''}limit for one note, so they stay on this computer.`}
+              >
+                <div className="sync-conflicts">
+                  {status.skipped.map((p) => (
                     <button
                       key={p}
                       className="plain"

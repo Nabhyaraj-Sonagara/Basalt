@@ -8,7 +8,7 @@ import { promises as fsp } from 'node:fs';
 import { dirname } from 'node:path';
 import { hiveKeys, openContent, openMeta, pathId, sealContent, sealMeta, sha256, type HiveKeys } from './crypto';
 import { SyncHttpError, type SyncClient } from './client';
-import type { LocalFile, SyncFs } from './fs';
+import { syncsFile, type LocalFile, type SyncFs } from './fs';
 import { MAX_FILE_BYTES_DEFAULT } from './protocol';
 
 export interface FileState {
@@ -71,7 +71,10 @@ export interface EngineOptions {
   hiveKey: Buffer;
   fs: SyncFs;
   store: StateStore;
+  /** Largest file to upload; use the server's limit (MeResponse.maxFileBytes). */
   maxFileBytes?: number;
+  /** Which hive paths sync, in both directions. Defaults to notes only (see syncsFile). */
+  include?: (path: string) => boolean;
   onEvent?: (e: SyncEvent) => void;
   now?: () => Date;
 }
@@ -175,6 +178,9 @@ export class SyncEngine {
           continue;
         }
         const path = meta.path;
+        // Not a kind of file this device syncs (for example an attachment uploaded by an older
+        // version): leave it alone here, and never treat its absence as a deletion.
+        if (!this.included(path)) continue;
         if (pathId(this.keys, path) !== rec.pathId) {
           this.emit({ type: 'skipped', path, reason: 'path does not match its id' }, r);
           continue;
@@ -218,11 +224,15 @@ export class SyncEngine {
     }
   }
 
+  private included(path: string) {
+    return (this.o.include ?? syncsFile)(path);
+  }
+
   /** Returns false when the server reported a newer revision (pull and try again). */
   private async push(state: SyncState, r: SyncResult): Promise<boolean> {
     const { client, hiveId, fs } = this.o;
     const max = this.o.maxFileBytes ?? MAX_FILE_BYTES_DEFAULT;
-    const local = await fs.list();
+    const local = (await fs.list()).filter((f) => this.included(f.path));
     const present = new Set(local.map((f) => f.path));
     try {
       for (const f of local) {
@@ -242,12 +252,27 @@ export class SyncEngine {
         const hash = sha256(data);
         const id = pathId(this.keys, f.path);
         const meta = sealMeta(this.keys, id, { path: f.path, hash, size: data.length, mtime: f.mtime });
-        const res = await client.putFile(hiveId, id, sealContent(this.keys, id, data), meta, st?.rev ?? 0);
+        let res;
+        try {
+          res = await client.putFile(hiveId, id, sealContent(this.keys, id, data), meta, st?.rev ?? 0);
+        } catch (err) {
+          // The server's own size limit can be lower than ours; skip the file rather than stall sync.
+          if (err instanceof SyncHttpError && err.status === 413) {
+            this.emit({ type: 'skipped', path: f.path, reason: err.message }, r);
+            continue;
+          }
+          throw err;
+        }
         state.files[f.path] = { pathId: id, rev: res.rev, hash, size: f.size, mtime: f.mtime };
         this.emit({ type: 'uploaded', path: f.path }, r);
       }
       for (const [path, st] of Object.entries(state.files)) {
         if (present.has(path)) continue;
+        if (!this.included(path)) {
+          // No longer a synced kind of file: forget it without deleting anything.
+          delete state.files[path];
+          continue;
+        }
         if (st.hash !== null) {
           const meta = sealMeta(this.keys, st.pathId, { path, hash: '', size: 0, mtime: Date.now() });
           await client.deleteFile(hiveId, st.pathId, meta, st.rev);

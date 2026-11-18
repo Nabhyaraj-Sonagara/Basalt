@@ -8,9 +8,17 @@ export interface Config {
   serverSecret: string;
   dataDir: string;
   s3: { bucket: string; region?: string; prefix: string; endpoint?: string } | null;
+  /** Stored bytes per account. Sync is for notes, so this is small by default. */
   quotaBytes: number;
+  /** Largest single file. */
   maxFileBytes: number;
+  /** Files per account (stops a quota from being spent on millions of tiny files). */
+  maxFiles: number;
+  /** Uploads plus downloads per account per UTC day, which bounds bandwidth costs. 0 turns it off. */
+  transferBytesPerDay: number;
   allowSignup: boolean;
+  /** Most accounts the server takes. 0 means no limit. */
+  maxUsers: number;
   /** Read the client address from X-Forwarded-For (set when behind Caddy or a load balancer). */
   trustProxy: boolean;
   sessionDays: number;
@@ -31,9 +39,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     serverSecret: env.SERVER_SECRET,
     dataDir: env.DATA_DIR ?? '/data/blobs',
     s3: env.S3_BUCKET ? { bucket: env.S3_BUCKET, region: env.S3_REGION || env.AWS_REGION, prefix: env.S3_PREFIX ?? 'blobs/', endpoint: env.S3_ENDPOINT || undefined } : null,
-    quotaBytes: num(env.QUOTA_BYTES, 1024 ** 3),
-    maxFileBytes: num(env.MAX_FILE_BYTES, 100 * 1024 ** 2),
+    quotaBytes: num(env.QUOTA_BYTES, 100 * 1024 ** 2),
+    maxFileBytes: num(env.MAX_FILE_BYTES, 2 * 1024 ** 2),
+    maxFiles: num(env.MAX_FILES, 20_000),
+    transferBytesPerDay: num(env.TRANSFER_BYTES_PER_DAY, 1024 ** 3),
     allowSignup: bool(env.ALLOW_SIGNUP, true),
+    maxUsers: num(env.MAX_USERS, 0),
     trustProxy: bool(env.TRUST_PROXY, false),
     sessionDays: num(env.SESSION_DAYS, 90),
   };

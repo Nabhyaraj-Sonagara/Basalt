@@ -22,12 +22,31 @@ const SKIP_NAMES = new Set(['.git', 'node_modules', '.DS_Store', 'Thumbs.db', 'd
 const SKIP_PATHS = ['.basalt/index', '.basalt/snapshots', '.basalt/trash', '.basalt/workspace.json', '.basalt/sync'];
 const TEMP = /(\.\d+\.\d+\.tmp|\.basalt-sync\.tmp)$/;
 
+/**
+ * Sync carries notes, not attachments: Markdown (mind maps are Markdown too), canvases, HTML pages
+ * and the small text files Basalt keeps beside them (settings, plugins, themes). Images, PDFs,
+ * audio, video and other binaries stay on the device they were added on.
+ */
+export const NOTE_EXTENSIONS: ReadonlySet<string> = new Set([
+  'md', 'markdown', 'txt', 'canvas', 'html', 'htm', 'css', 'js', 'mjs', 'json', 'csv', 'tsv', 'svg', 'yml', 'yaml',
+]);
+
 /** Whether a hive-relative path is synced. */
 export function isSynced(path: string): boolean {
   if (TEMP.test(path)) return false;
   if (path.split('/').some((s) => SKIP_NAMES.has(s))) return false;
   return !SKIP_PATHS.some((p) => path === p || path.startsWith(p + '/'));
 }
+
+/** Whether a file at this path is the kind sync carries (see NOTE_EXTENSIONS). Folders aren't checked. */
+export function isNoteFile(path: string): boolean {
+  const name = path.slice(path.lastIndexOf('/') + 1);
+  const dot = name.lastIndexOf('.');
+  return dot > 0 && NOTE_EXTENSIONS.has(name.slice(dot + 1).toLowerCase());
+}
+
+/** Whether sync carries the file at this path. */
+export const syncsFile = (path: string) => isSynced(path) && isNoteFile(path);
 
 function safe(root: string, rel: string): string {
   if (!rel || rel.startsWith('/') || rel.split('/').some((s) => s === '..' || s === '' || s === '.') || rel.includes('\\') || rel.includes('\0')) {
@@ -56,6 +75,7 @@ export class NodeSyncFs implements SyncFs {
         if (!isSynced(rel)) continue;
         if (e.isDirectory()) await walk(abs);
         else if (e.isFile()) {
+          if (!isNoteFile(rel)) continue;
           const st = await fs.stat(abs).catch(() => null);
           if (st) out.push({ path: rel, size: st.size, mtime: Math.floor(st.mtimeMs) });
         }

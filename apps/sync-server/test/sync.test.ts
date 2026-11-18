@@ -19,6 +19,8 @@ import {
   hiveKeys,
   pathId,
   sealMeta,
+  sealContent,
+  sha256,
   type OpenedHive,
 } from '@basalt/sync';
 import { createApp } from '../src/app';
@@ -41,7 +43,7 @@ describe.skipIf(!DB)('sync server and engine', () => {
 
   const config = (o: Partial<Config> = {}): Config => ({
     port: 0, host: '127.0.0.1', databaseUrl: DB!, serverSecret: SECRET, dataDir: blobDir, s3: null,
-    quotaBytes: 50_000_000, maxFileBytes: 5_000_000, allowSignup: true, trustProxy: false, sessionDays: 90, ...o,
+    quotaBytes: 50_000_000, maxFileBytes: 5_000_000, maxFiles: 20_000, transferBytesPerDay: 0, allowSignup: true, maxUsers: 0, trustProxy: false, sessionDays: 90, ...o,
   });
   const listen = (s: Server) => new Promise<string>((r) => s.listen(0, '127.0.0.1', () => r(`http://127.0.0.1:${(s.address() as AddressInfo).port}`)));
 
@@ -209,7 +211,86 @@ describe.skipIf(!DB)('sync server and engine', () => {
     const s = await createAccount(c, 'quota@example.com', 'a long enough password', FAST);
     const h = await createRemoteHive(c, s.accountKey, 'Q');
     const d = device(h, c);
-    d.write('big.bin', 'x'.repeat(40_000));
+    d.write('big.md', 'x'.repeat(40_000));
     await expect(d.engine.run()).rejects.toMatchObject({ status: 507 });
+  });
+
+  /** A separate server with these limits, a fresh account on it, and one device. */
+  async function limited(o: Partial<Config>, who: string) {
+    const s = createApp({ config: config(o), db, blobs: new DiskBlobStore(blobDir), notifier });
+    servers.push(s);
+    const c = new SyncClient(await listen(s));
+    const acct = await createAccount(c, `${who}@example.com`, 'a long enough password', FAST);
+    const h = await createRemoteHive(c, acct.accountKey, who);
+    return { c, h, d: device(h, c) };
+  }
+
+  it('syncs notes only: attachments stay on the device', async () => {
+    const { c, h, d } = await limited({}, 'notesonly');
+    d.write('Plan.md', '# Plan');
+    d.write('Board.canvas', '{"nodes":[]}');
+    d.write('Pages/home.html', '<h1>Home</h1>');
+    writeFileSync(join(d.root, 'photo.png'), Buffer.alloc(3000, 1));
+    writeFileSync(join(d.root, 'scan.pdf'), Buffer.alloc(3000, 2));
+    const r = await d.engine.run();
+    expect(r.uploaded).toBe(3);
+    const other = device(h, c);
+    await other.engine.run();
+    expect(other.has('Plan.md') && other.has('Board.canvas') && other.has('Pages/home.html')).toBe(true);
+    expect(other.has('photo.png') || other.has('scan.pdf')).toBe(false);
+
+    // An attachment that reached the server some other way (an older version) is ignored, not
+    // downloaded, and the device that has it never deletes it.
+    const keys = hiveKeys(h.hiveKey);
+    const id = pathId(keys, 'old.png');
+    const data = Buffer.from('png bytes');
+    await c.putFile(h.id, id, sealContent(keys, id, data), sealMeta(keys, id, { path: 'old.png', hash: sha256(data), size: data.length, mtime: 1 }), 0);
+    await other.engine.run();
+    expect(other.has('old.png')).toBe(false);
+    expect((await c.changes(h.id, 0)).records.find((x) => x.pathId === id)?.deleted).toBe(false);
+  });
+
+  it('skips a note over the size limit and keeps syncing the rest', async () => {
+    const { c, d } = await limited({ maxFileBytes: 10_000 }, 'bignote');
+    expect((await c.me()).maxFileBytes).toBe(10_000);
+    d.write('Huge.md', 'x'.repeat(20_000));
+    d.write('Small.md', 'fine');
+    // Even when the device doesn't know the server's limit, the 413 skips just that file.
+    const r = await d.engine.run();
+    expect(r.uploaded).toBe(1);
+    expect(r.skipped).toEqual(['Huge.md']);
+  });
+
+  it('limits the number of files per account', async () => {
+    const { d } = await limited({ maxFiles: 3 }, 'manyfiles');
+    for (const n of ['a', 'b', 'c']) d.write(`${n}.md`, n);
+    await d.engine.run();
+    d.write('d.md', 'd');
+    await expect(d.engine.run()).rejects.toMatchObject({ status: 507, code: 'file_limit' });
+    // Deleting a file frees its place.
+    rmSync(join(d.root, 'a.md'));
+    rmSync(join(d.root, 'd.md'));
+    await d.engine.run();
+    d.write('d.md', 'd');
+    await expect(d.engine.run()).resolves.toMatchObject({ uploaded: 1 });
+  });
+
+  it('limits daily transfer per account', async () => {
+    const { h, c, d } = await limited({ transferBytesPerDay: 5_000 }, 'transfer');
+    d.write('One.md', 'x'.repeat(2_000));
+    d.write('Two.md', 'y'.repeat(2_000));
+    await d.engine.run();
+    const other = device(h, c);
+    // Downloads count too: 4 KB already went up, so the next download goes over.
+    await expect(other.engine.run()).rejects.toMatchObject({ status: 429, code: 'transfer_limit' });
+  });
+
+  it('stops sign-ups at the account limit', async () => {
+    const n = Number((await db.query('SELECT count(*)::int AS n FROM users')).rows[0].n);
+    const s = createApp({ config: config({ maxUsers: n + 1 }), db, blobs: new DiskBlobStore(blobDir), notifier });
+    servers.push(s);
+    const c = new SyncClient(await listen(s));
+    await createAccount(c, 'last@example.com', 'a long enough password', FAST);
+    await expect(createAccount(new SyncClient(c.base), 'onemore@example.com', 'a long enough password', FAST)).rejects.toMatchObject({ status: 403 });
   });
 });

@@ -31,6 +31,8 @@ const email = z.string().trim().toLowerCase().max(254).email();
 const uuid = z.string().uuid();
 const pathIdRe = /^[a-f0-9]{64}$/;
 
+/** "2 MB", "512 KB": for messages people read. */
+const size = (n: number) => (n >= 1024 ** 2 ? `${+(n / 1024 ** 2).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 const sha = (b: Buffer | string) => createHash('sha256').update(b).digest();
 const authHash = (authKey: Buffer, salt: Buffer) => scrypt(authKey, salt, 32, { N: 2 ** 14, r: 8, p: 1 });
 
@@ -68,12 +70,14 @@ interface Ctx {
   ip: string;
 }
 
-async function readBody(req: IncomingMessage, max: number): Promise<Buffer> {
+async function readBody(req: IncomingMessage, max: number, tooLarge = 'That request is too large.'): Promise<Buffer> {
+  const declared = Number(req.headers['content-length']);
+  if (Number.isFinite(declared) && declared > max) throw new HttpError(413, 'too_large', tooLarge);
   const chunks: Buffer[] = [];
-  let size = 0;
+  let total = 0;
   for await (const chunk of req) {
-    size += (chunk as Buffer).length;
-    if (size > max) throw new HttpError(413, 'too_large', `Files over ${Math.round(max / 1e6)} MB can't be synced.`);
+    total += (chunk as Buffer).length;
+    if (total > max) throw new HttpError(413, 'too_large', tooLarge);
     chunks.push(chunk as Buffer);
   }
   return Buffer.concat(chunks);
@@ -104,6 +108,24 @@ function send(res: ServerResponse, status: number, body?: unknown) {
 export function createApp({ config, db, blobs, notifier }: AppDeps): Server {
   const authLimit = new RateLimiter(20, 10 * 60 * 1000);
   const signupLimit = new RateLimiter(5, 60 * 60 * 1000);
+
+  // Old daily transfer rows are only needed for today; clear them out now and then.
+  setInterval(() => void db.query(`DELETE FROM transfer WHERE day < current_date - 2`).catch(() => {}), 60 * 60 * 1000).unref();
+
+  /** Counts bytes against the account's daily transfer allowance, refusing once it would go over. */
+  async function charge(userId: string, bytes: number): Promise<void> {
+    const limit = config.transferBytesPerDay;
+    if (!limit) return;
+    const r = await db.query(
+      `INSERT INTO transfer(user_id, day, bytes) SELECT $1::uuid, current_date, $2::bigint WHERE $2::bigint <= $3::bigint
+       ON CONFLICT (user_id, day) DO UPDATE SET bytes = transfer.bytes + $2::bigint WHERE transfer.bytes + $2::bigint <= $3::bigint
+       RETURNING bytes`,
+      [userId, bytes, limit],
+    );
+    if (!r.rowCount) {
+      throw new HttpError(429, 'transfer_limit', `This account has used today's sync allowance (${size(limit)} of uploads and downloads). Sync picks up again tomorrow (UTC).`);
+    }
+  }
 
   const fakeSalt = (e: string) => createHmac('sha256', config.serverSecret).update(`salt:${e}`).digest().subarray(0, 16);
 
@@ -158,12 +180,17 @@ export function createApp({ config, db, blobs, notifier }: AppDeps): Server {
         const rev = cur.rowCount ? (cur.rows[0].rev as number) : 0;
         if (rev !== expect) throw new HttpError(409, 'conflict', 'Another device changed this file first.', { rev });
         if (!body && (!cur.rowCount || cur.rows[0].deleted)) throw new HttpError(404, 'not_found', 'That file is already deleted.');
-        const oldSize = cur.rowCount && !cur.rows[0].deleted ? Number(cur.rows[0].size) : 0;
+        const wasLive = !!cur.rowCount && !cur.rows[0].deleted;
+        const oldSize = wasLive ? Number(cur.rows[0].size) : 0;
         const newSize = body ? body.length : 0;
-        if (newSize > oldSize) {
-          const u = await c.query('SELECT usage_bytes FROM users WHERE id = $1 FOR UPDATE', [userId]);
+        const addFiles = (body ? 1 : 0) - (wasLive ? 1 : 0);
+        if (newSize > oldSize || addFiles > 0) {
+          const u = await c.query('SELECT usage_bytes, file_count FROM users WHERE id = $1 FOR UPDATE', [userId]);
           if (Number(u.rows[0].usage_bytes) + newSize - oldSize > config.quotaBytes) {
-            throw new HttpError(507, 'quota', `Your sync storage is full (${Math.round(config.quotaBytes / 1024 ** 2)} MB).`);
+            throw new HttpError(507, 'quota', `Your sync storage is full (${size(config.quotaBytes)}). Sync is for notes; delete notes you don't need or keep big files out of the hive.`);
+          }
+          if (addFiles > 0 && Number(u.rows[0].file_count) + addFiles > config.maxFiles) {
+            throw new HttpError(507, 'file_limit', `This account has the most files sync holds (${config.maxFiles.toLocaleString('en')}).`);
           }
         }
         const seq = Number(h.rows[0].seq) + 1;
@@ -174,7 +201,7 @@ export function createApp({ config, db, blobs, notifier }: AppDeps): Server {
            ON CONFLICT (hive_id, path_id) DO UPDATE SET rev = $3, seq = $4, deleted = $5, meta = $6, blob_id = $7, size = $8, updated_at = now()`,
           [hiveId, id, rev + 1, seq, !body, meta, blobId, newSize],
         );
-        await c.query('UPDATE users SET usage_bytes = usage_bytes + $2 WHERE id = $1', [userId, newSize - oldSize]);
+        await c.query('UPDATE users SET usage_bytes = usage_bytes + $2, file_count = greatest(0, file_count + $3) WHERE id = $1', [userId, newSize - oldSize, addFiles]);
         oldBlob = cur.rowCount ? cur.rows[0].blob_id : null;
         return { rev: rev + 1, seq };
       });
@@ -211,6 +238,10 @@ export function createApp({ config, db, blobs, notifier }: AppDeps): Server {
       if (!config.allowSignup) throw new HttpError(403, 'signup_closed', 'This sync server is not taking new accounts.');
       signupLimit.check(`signup:${ctx.ip}`);
       const body = await readJson(req, z.object({ email, salt: b64, kdf, authKey: b64, wrappedAccountKey: b64 }));
+      if (config.maxUsers > 0) {
+        const n = await db.query('SELECT count(*)::int AS n FROM users');
+        if (n.rows[0].n >= config.maxUsers) throw new HttpError(403, 'signup_full', 'This sync server has all the accounts it can take.');
+      }
       const authSalt = randomBytes(16);
       const hash = await authHash(Buffer.from(body.authKey, 'base64'), authSalt);
       const out = await tx(db, async (c) => {
@@ -262,8 +293,17 @@ export function createApp({ config, db, blobs, notifier }: AppDeps): Server {
     }
     if (path === '/me' && m === 'GET') {
       const u = await user(ctx);
-      const r = await db.query('SELECT email, usage_bytes, wrapped_account_key FROM users WHERE id = $1', [u.id]);
-      return send(res, 200, { email: r.rows[0].email, usageBytes: Number(r.rows[0].usage_bytes), quotaBytes: config.quotaBytes, wrappedAccountKey: r.rows[0].wrapped_account_key.toString('base64') });
+      const r = await db.query('SELECT email, usage_bytes, file_count, wrapped_account_key FROM users WHERE id = $1', [u.id]);
+      return send(res, 200, {
+        email: r.rows[0].email,
+        usageBytes: Number(r.rows[0].usage_bytes),
+        quotaBytes: config.quotaBytes,
+        wrappedAccountKey: r.rows[0].wrapped_account_key.toString('base64'),
+        maxFileBytes: config.maxFileBytes,
+        fileCount: Number(r.rows[0].file_count),
+        maxFiles: config.maxFiles,
+        transferBytesPerDay: config.transferBytesPerDay,
+      });
     }
     if (path === '/me' && m === 'DELETE') {
       const u = await user(ctx);
@@ -299,9 +339,9 @@ export function createApp({ config, db, blobs, notifier }: AppDeps): Server {
     if (!hm[2] && m === 'DELETE') {
       const blobIds = (await db.query('SELECT blob_id FROM files WHERE hive_id = $1 AND blob_id IS NOT NULL', [hiveId])).rows.map((r) => r.blob_id as string);
       await tx(db, async (c) => {
-        const size = await c.query('SELECT coalesce(sum(size), 0)::bigint AS s FROM files WHERE hive_id = $1 AND NOT deleted', [hiveId]);
+        const live = await c.query('SELECT coalesce(sum(size), 0)::bigint AS s, count(*)::int AS n FROM files WHERE hive_id = $1 AND NOT deleted', [hiveId]);
         await c.query('DELETE FROM hives WHERE id = $1', [hiveId]);
-        await c.query('UPDATE users SET usage_bytes = greatest(0, usage_bytes - $2) WHERE id = $1', [u.id, Number(size.rows[0].s)]);
+        await c.query('UPDATE users SET usage_bytes = greatest(0, usage_bytes - $2), file_count = greatest(0, file_count - $3) WHERE id = $1', [u.id, Number(live.rows[0].s), live.rows[0].n]);
       });
       for (const b of blobIds) await blobs.delete(b).catch(() => {});
       return send(res, 204);
@@ -334,8 +374,9 @@ export function createApp({ config, db, blobs, notifier }: AppDeps): Server {
       const id = hm[3];
       if (!pathIdRe.test(id)) throw new HttpError(400, 'invalid', 'Bad file id.');
       if (m === 'GET') {
-        const r = await db.query('SELECT blob_id FROM files WHERE hive_id = $1 AND path_id = $2 AND NOT deleted', [hiveId, id]);
+        const r = await db.query('SELECT blob_id, size FROM files WHERE hive_id = $1 AND path_id = $2 AND NOT deleted', [hiveId, id]);
         if (!r.rowCount || !r.rows[0].blob_id) throw new HttpError(404, 'not_found', 'No such file.');
+        await charge(u.id, Number(r.rows[0].size));
         const data = await blobs.get(r.rows[0].blob_id);
         res.writeHead(200, { 'content-type': 'application/octet-stream', 'content-length': data.length }).end(data);
         return;
@@ -343,7 +384,9 @@ export function createApp({ config, db, blobs, notifier }: AppDeps): Server {
       if (m === 'PUT') {
         const expect = ifMatch(ctx);
         const meta = metaHeader(ctx);
-        const body = await readBody(req, config.maxFileBytes + 64);
+        // Sealed content is the file plus a small header and tag, hence the allowance.
+        const body = await readBody(req, config.maxFileBytes + 64, `Files over ${size(config.maxFileBytes)} don't sync. Sync is for notes; big files stay on your devices.`);
+        await charge(u.id, body.length);
         return send(res, 200, await writeFile(hiveId, u.id, id, expect, meta, body));
       }
       if (m === 'DELETE') {

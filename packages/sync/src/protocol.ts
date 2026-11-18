@@ -2,7 +2,8 @@
 // file bodies travel as application/octet-stream.
 
 export const API = '/v1';
-export const MAX_FILE_BYTES_DEFAULT = 100 * 1024 * 1024;
+/** Sync is for notes: files larger than this aren't uploaded unless the server says otherwise. */
+export const MAX_FILE_BYTES_DEFAULT = 2 * 1024 * 1024;
 
 export interface AuthParamsRequest {
   email: string;
@@ -40,6 +41,11 @@ export interface MeResponse {
   usageBytes: number;
   quotaBytes: number;
   wrappedAccountKey: string;
+  /** Server limits (absent on servers older than 0.3). */
+  maxFileBytes?: number;
+  fileCount?: number;
+  maxFiles?: number;
+  transferBytesPerDay?: number;
 }
 
 export interface RemoteHive {
