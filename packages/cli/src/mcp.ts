@@ -29,7 +29,7 @@ export function createMcpServer(hive: Hive): McpServer {
   const server = new McpServer(
     { name: 'basalt', version: VERSION },
     {
-      instructions: `Basalt hive "${hive.name}": a folder of linked Markdown notes. Read the hive_guide tool first for this hive's conventions. Link notes with [[Note name]]. Prefer append_to_note and set_properties over rewriting whole notes. To draw something, add a \`\`\`mermaid code block (flowchart, sequenceDiagram, pie, xychart-beta…) to a note, or make a mind map with create_mind_map; Basalt renders both.`,
+      instructions: `Basalt hive "${hive.name}": a folder of linked Markdown notes. Read the hive_guide tool first for this hive's conventions. Link notes with [[Note name]]. Prefer append_to_note and set_properties over rewriting whole notes. To draw something, add a \`\`\`mermaid code block (flowchart, sequenceDiagram, pie, xychart-beta…) to a note, or make a mind map with create_mind_map; Basalt renders both. For something interactive, create_note a self-contained .html page (inline CSS and JS, or files next to it; pages run offline in a sandbox with no network) and embed it in a note with ![[page.html]] or ![[page.html|400]] for a 400px-tall frame.`,
     },
   );
   const ro = { readOnlyHint: true, openWorldHint: false } as const;

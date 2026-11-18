@@ -475,3 +475,16 @@ mark { background: var(--pollen); color: var(--on-honey); border-radius: var(--r
 .illustrate-row { display: flex; gap: var(--space-3); align-items: flex-end; flex-wrap: wrap; }
 .illustrate-row .grow { flex: 1; min-width: 220px; }
 .dialog .small { font: var(--type-caption); margin: 0; }
+
+/* ---------- HTML pages ---------- */
+.page-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.page-bar { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--line); }
+.page-bar .grow { flex: 1; }
+.page-title { font: var(--type-ui-strong); }
+.page-note { font: var(--type-caption); color: var(--ink-muted); }
+.page-frame { flex: 1; width: 100%; border: 0; background: #fff; }
+.page-source { flex: 1; min-height: 0; overflow: auto; }
+.page-source .cm-editor { height: 100%; font: 13px/1.6 var(--font-mono, ui-monospace, monospace); }
+.page-source .cm-editor.cm-focused { outline: none; }
+.page-source .cm-gutters { background: var(--surface-sunken); border-right: 1px solid var(--line); color: var(--ink-muted); }
+.bs-embed-page { display: block; width: 100%; border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fff; margin: var(--space-3) 0; }

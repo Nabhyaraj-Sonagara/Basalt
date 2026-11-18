@@ -1,5 +1,6 @@
 import { buildBasaltUri, dirOf, extOf, isNote, mindNode, outlineFromNote, serializeMindmap, type MindNode } from '@basalt/core/browser';
 import type { HiveChange, UriRequest } from '../../shared/api';
+import { STARTER_PAGE } from './pages';
 import {
   activePane,
   activeTab,
@@ -193,7 +194,7 @@ export async function createNote(name = 'Untitled', opts: { folder?: string; exa
   try {
     const folder = opts.folder ?? newNoteFolder(activeTab()?.path ?? '');
     const path = opts.exactPath || !folder ? `${name}` : `${folder}/${name}`;
-    const created = await api().hive.create(isNote(path) || extOf(path) === 'canvas' ? path : `${path}.md`, opts.text ?? '', opts.template);
+    const created = await api().hive.create(isNote(path) || ['canvas', 'html', 'htm'].includes(extOf(path)) ? path : `${path}.md`, opts.text ?? '', opts.template);
     refreshSnapshot();
     return created;
   } catch (err) {
@@ -223,6 +224,16 @@ export function consumeTitleFocus(path: string): boolean {
 export async function newCanvas(): Promise<void> {
   const path = await createNote('Untitled.canvas', { folder: newNoteFolder(activeTab()?.path ?? '') });
   if (path) openPath(path);
+}
+
+/** A new HTML page from the starter, opened as source so it can be written straight away. */
+export async function newPage(): Promise<void> {
+  const path = await createNote('Untitled page.html', { folder: newNoteFolder(activeTab()?.path ?? ''), text: STARTER_PAGE });
+  if (!path) return;
+  openPath(path);
+  const pane = activePane();
+  const tab = activeTab();
+  if (tab?.path === path) updateTab(pane.id, tab.id, { mode: 'source' });
 }
 
 /** A new mind-map note: a root idea and one branch, opened in the map view. */
