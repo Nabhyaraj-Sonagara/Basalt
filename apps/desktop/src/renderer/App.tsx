@@ -6,6 +6,7 @@ import { RightPanel } from './components/RightPanel';
 import { Palette } from './components/Palette';
 import { Settings } from './components/Settings';
 import { PromptDialog, RecoveryDialog } from './components/Dialogs';
+import { IllustrateDialog } from './components/IllustrateDialog';
 import { HoverLayer } from './components/HoverLayer';
 import { Toasts } from './components/Toasts';
 import { StartScreen } from './components/StartScreen';
@@ -15,6 +16,7 @@ import { api, go, handleChanges, handleUri, makeTab, openHive, scheduleWorkspace
 import { commandById, runHotkey } from './lib/commands';
 import { activeTab, applySnapshot, setMode, getState, setState, toast, useStore } from './lib/store-all';
 import type { UpdateStatus } from '../shared/api';
+import { loadPlugins } from './lib/plugins';
 
 function StatusBar() {
   const tab = useStore((s) => activeTab(s));
@@ -47,8 +49,25 @@ function StatusBar() {
           </button>
         </>
       ) : null}
+      <PluginStatus />
       <SyncIndicator />
     </footer>
+  );
+}
+
+function PluginStatus() {
+  const status = useStore((s) => s.pluginStatus);
+  const plugins = useStore((s) => s.plugins);
+  return (
+    <>
+      {Object.entries(status)
+        .filter(([, t]) => t)
+        .map(([id, t]) => (
+          <span key={id} className="plugin-status" data-plugin={id} title={plugins.find((p) => p.manifest?.id === id)?.manifest?.name}>
+            {t}
+          </span>
+        ))}
+    </>
   );
 }
 
@@ -69,7 +88,12 @@ function Workspace() {
   const rightOpen = useStore((s) => s.rightOpen);
   const popout = useStore((s) => !!s.popout);
   const statusBar = useAppearance().statusBar;
+  const root = useStore((s) => s.hive?.info.root);
   useEffect(() => scheduleWorkspaceSave(), [leftOpen, rightOpen]);
+  // Pop-out windows show one note; plugins run in the main window only.
+  useEffect(() => {
+    if (!popout) void loadPlugins();
+  }, [root, popout]);
   return (
     <div className={`workspace${leftOpen ? '' : ' no-left'}${rightOpen ? '' : ' no-right'}`}>
       {leftOpen ? <Sidebar /> : null}
@@ -170,6 +194,7 @@ export function App() {
       <Settings />
       <PromptDialog />
       <RecoveryDialog />
+      <IllustrateDialog />
       <HoverLayer />
       <Toasts />
     </>

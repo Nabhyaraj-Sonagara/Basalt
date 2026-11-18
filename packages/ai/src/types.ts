@@ -13,9 +13,17 @@ export interface ProviderConfig {
   effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 }
 
+/** A picture sent with a message: base64 bytes, no data: prefix. */
+export interface ChatImage {
+  mediaType: 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif';
+  data: string;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+  /** Pictures for models that can see them (sketches, photos, screenshots). */
+  images?: ChatImage[];
 }
 
 export interface ChatRequest {

@@ -36,6 +36,13 @@ Basalt is a local-first Markdown notes app built so AI can work with your notes 
 - Every hive gets a crest of basalt columns drawn from its name; give it a colour or an emoji instead.
 - Share a look as a `.basalt-theme.json` file (Settings → Appearance → Themes), plus CSS snippets for anything else.
 
+**Think visually**
+- **Mind maps** (Command palette → *New mind map*, or *Create a mind map from this note*): add branches with Tab and Enter, rename by typing, fold with Space, and pan and zoom. A map is still a plain Markdown note (`view: mindmap`, a `# Central idea` and a nested list), so links, search, sync and other apps keep working. *Text* shows the Markdown behind it.
+- **Illustrate** (<kbd>Ctrl/Cmd</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd>): draw a sketch, drop or paste a photo of a whiteboard, or pick the current note, and the assistant turns it into a flowchart, sequence diagram, chart or mind map. Diagrams are Mermaid blocks Basalt draws for you, with the original picture saved next to them. It needs a model that can see pictures (Claude, GPT, Gemini, or a local vision model such as LLaVA).
+- **HTML pages** (Command palette → *New HTML page*): any `.html` file in your hive opens as a live page, with *Edit HTML* for the source. Embed one in a note with `![[page.html]]`, or `![[page.html|400]]` for a 400px-tall frame. Put the page's CSS, scripts, images and fonts next to it and link them by relative path. Pages run in a sandbox: they work offline, can't reach the internet, and can't read your notes or Basalt itself.
+- **Plugins** (Settings → Plugins): add commands, status-bar text and side panels with a little JavaScript. Plugins run in a sandbox without internet access, ask before reading or changing notes, and start off until you turn them on. See [docs/plugins.md](docs/plugins.md) and the [example](examples/plugins/word-goal).
+- Connected agents can draw too: they write Mermaid blocks, call `create_mind_map`, or write `.html` pages.
+
 **Built for AI**
 - **Assistant** that answers using your current note, your selection, or relevant notes from across the hive, and links the notes it used. It works with Claude, OpenAI, Gemini, and any OpenAI-compatible endpoint, including **local models** in Ollama or LM Studio. API keys stay in your system keychain.
 - **Use the AI plan you already pay for**: Settings → AI apps and agents → **Connect** sets your hive up in Claude Desktop, Claude Code or Codex in one click. They start Basalt in the background (`Basalt --mcp`) and work on your notes with your Claude or ChatGPT subscription; no API key, no Node install.

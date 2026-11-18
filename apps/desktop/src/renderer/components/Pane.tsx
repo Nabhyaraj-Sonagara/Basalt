@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Tabs, EmptyState, Button, Kbd, SearchField } from '@basalt/ui';
 import { NoteView } from './NoteView';
 import { CanvasView } from './CanvasView';
+import { PageView } from './PageView';
 import { GlobalComb } from './CombView';
 import { api, closeTab, newNote, openPath, scheduleWorkspaceSave } from '../lib/actions';
 import { formatHotkey } from '../lib/commands';
@@ -131,6 +132,8 @@ function View({ tab, paneId, isActive }: { tab: Tab; paneId: string; isActive: b
       return <NoteView tab={tab} isActive={isActive} />;
     case 'canvas':
       return <CanvasView path={tab.path!} />;
+    case 'page':
+      return <PageView tab={tab} paneId={paneId} />;
     case 'comb':
       return <GlobalComb />;
     case 'table':

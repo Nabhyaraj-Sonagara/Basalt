@@ -2,23 +2,27 @@ import { app, BrowserWindow, dialog, ipcMain, net, protocol, safeStorage, sessio
 import { existsSync, promises as fs } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { Hive, parseBasaltUri, safeRelPath, type HiveEvent } from '@basalt/core';
+import { CONFIG_DIR, Hive, parseBasaltUri, safeRelPath, type HiveEvent } from '@basalt/core';
 import {
   PROVIDER_PRESETS,
   SemanticIndex,
   buildSystemPrompt,
   createEmbedder,
   createProvider,
+  extractIllustration,
+  illustrationPrompt,
   type ProviderConfig,
   type SemanticHit,
 } from '@basalt/ai';
-import type { AiSettings, AppInfo, ChatStart, ConnectClientId, HiveChange, HiveSnapshot, NoteSummary, ProviderSettings, UriRequest } from '../shared/api';
+import type { AiSettings, AppInfo, ChatStart, IllustrateRequest, ConnectClientId, HiveChange, HiveSnapshot, NoteSummary, ProviderSettings, UriRequest } from '../shared/api';
 import { editableContextMenu, installMenu } from './menu';
 import { checkForUpdates, initUpdater, installUpdate, updateStatus } from './updater';
 import { SyncController } from './sync';
 import { startMcpMode } from './mcp-mode';
 import { connectClient, connectStatus, disconnectClient, mcpLaunchCommand } from './connect';
 import { detectLocalModels, signInWithOpenRouter } from './openrouter';
+import { PAGE_CSP, PAGE_SCHEME, pageResponse } from './pages';
+import { PLUGIN_CSP, PLUGIN_SCHEME, listPlugins, parseManifest, pluginResponse } from './plugins';
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL;
 const here = import.meta.dirname;
@@ -27,6 +31,10 @@ const MCP_MODE = process.argv.includes('--mcp');
 
 if (!MCP_MODE) protocol.registerSchemesAsPrivileged([
   { scheme: 'basalt-file', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } },
+  // HTML pages from the hive; see pages.ts for how they're fenced in.
+  { scheme: PAGE_SCHEME, privileges: { standard: true, secure: true, stream: true } },
+  // Plugins from .basalt/plugins; see plugins.ts.
+  { scheme: PLUGIN_SCHEME, privileges: { standard: true, secure: true, stream: true } },
 ]);
 
 // ---------- persisted app state ----------
@@ -88,6 +96,7 @@ function summaries(h: Hive): NoteSummary[] {
     blocks: n.blocks.map((b) => b.id),
     mtime: n.mtime,
     wordCount: n.wordCount,
+    view: typeof n.frontmatter.view === 'string' ? n.frontmatter.view : undefined,
   }));
 }
 
@@ -226,6 +235,37 @@ async function runChat(req: ChatStart, to: Electron.WebContents) {
   }
 }
 
+const illustrations = new Map<string, AbortController>();
+
+/** One answer from the chat model: a mind-map outline or Mermaid source for a note or a picture. */
+async function illustrate(req: IllustrateRequest): Promise<{ text: string }> {
+  const h = requireHive();
+  const id = req.providerId ?? ai.chatProvider;
+  if (!id) throw new Error('Set up a model in Settings → Assistant first.');
+  const cfg = providerConfig(id);
+  if (!cfg.model) throw new Error(`Pick a model for ${cfg.label} in Settings → Assistant.`);
+  const note = req.notePath && h.exists(req.notePath) ? await h.read(req.notePath) : undefined;
+  const title = req.notePath ? h.notes.get(req.notePath)?.title : undefined;
+  const { system, user } = illustrationPrompt({ kind: req.kind, title, text: note, hasImage: !!req.image, instructions: req.instructions });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 180_000);
+  if (req.id) illustrations.set(req.id, ctrl);
+  try {
+    let out = '';
+    const messages = [{ role: 'user' as const, content: user, ...(req.image ? { images: [req.image] } : {}) }];
+    for await (const t of createProvider(cfg).stream({ system, messages, maxTokens: 8000, signal: ctrl.signal })) out += t;
+    return { text: extractIllustration(req.kind, out) };
+  } catch (err) {
+    if (ctrl.signal.aborted) throw new Error(req.id && !illustrations.has(req.id) ? 'Cancelled.' : 'The model took too long to answer.');
+    const msg = (err as Error).message;
+    if (req.image && /image|vision|multimodal|modalit/i.test(msg)) throw new Error(`${cfg.label} (${cfg.model}) can't read pictures. Pick a model that can see images in Settings → Assistant. ${msg}`);
+    throw err;
+  } finally {
+    clearTimeout(timer);
+    if (req.id) illustrations.delete(req.id);
+  }
+}
+
 async function saveProvider(p: ProviderSettings, apiKey?: string | null): Promise<AiSettings> {
   const { hasKey: _ignored, ...cfg } = p;
   const i = ai.providers.findIndex((x) => x.id === cfg.id);
@@ -257,6 +297,8 @@ function trustedSender(e: Electron.IpcMainInvokeEvent): boolean {
   if (isDev) return url.startsWith(process.env.ELECTRON_RENDERER_URL!);
   return url.startsWith(pathToFileURL(join(here, '../renderer/')).toString());
 }
+
+const pluginsDir = () => join(requireHive().root, CONFIG_DIR, 'plugins');
 
 function handle(channel: string, fn: (this: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown) {
   ipcMain.handle(channel, async (e, ...args) => {
@@ -329,6 +371,31 @@ function registerIpc() {
   });
   handle('app:openExternal', (url: string) => {
     if (/^(https?|mailto):/i.test(url)) return shell.openExternal(url);
+  });
+  handle('plugins:list', () => listPlugins(pluginsDir()));
+  handle('plugins:reveal', async () => {
+    await fs.mkdir(pluginsDir(), { recursive: true });
+    await shell.openPath(pluginsDir());
+  });
+  handle('plugins:install', async function () {
+    const parent = BrowserWindow.fromWebContents(this.sender) ?? undefined;
+    const pick = await (parent ? dialog.showOpenDialog(parent, { title: 'Choose a plugin folder', properties: ['openDirectory'] }) : dialog.showOpenDialog({ title: 'Choose a plugin folder', properties: ['openDirectory'] }));
+    if (pick.canceled || !pick.filePaths[0]) return null;
+    const src = pick.filePaths[0];
+    const raw = JSON.parse(await fs.readFile(join(src, 'manifest.json'), 'utf8').catch(() => {
+      throw new Error("That folder has no manifest.json, so it isn't a Basalt plugin.");
+    }));
+    const id = String((raw as { id?: unknown }).id ?? '');
+    const manifest = parseManifest(raw, id);
+    const dest = join(pluginsDir(), manifest.id);
+    if (resolve(src) === resolve(dest)) return manifest.id;
+    await fs.rm(dest, { recursive: true, force: true });
+    await fs.cp(src, dest, { recursive: true, filter: (f) => !/[\\/](node_modules|\.git)([\\/]|$)/.test(f) });
+    return manifest.id;
+  });
+  handle('plugins:remove', async (id: string) => {
+    if (!/^[a-z0-9][a-z0-9-]{1,40}$/.test(String(id))) throw new Error('Unknown plugin');
+    await shell.trashItem(join(pluginsDir(), id));
   });
   handle('app:showInFolder', (path: string) => shell.showItemInFolder(requireHive().abs(path)));
   handle('app:cliCommand', () => {
@@ -485,6 +552,12 @@ function registerIpc() {
     void runChat(req, this.sender);
   });
   handle('ai:cancel', (id: string) => chats.get(id)?.abort());
+  handle('ai:illustrate', (req: IllustrateRequest) => illustrate(req));
+  handle('ai:cancelIllustrate', (id: string) => {
+    const c = illustrations.get(id);
+    illustrations.delete(id);
+    c?.abort();
+  });
   handle('ai:semanticSearch', async (q: string) => (await semanticIndex()).search(String(q), 20));
   handle('ai:related', async (p: string, unlinkedOnly?: boolean) => (await semanticIndex()).related(p, 8, !!unlinkedOnly));
   handle('ai:reindex', async () => {
@@ -530,6 +603,12 @@ function createWindow(popout?: string) {
   w.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/i.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
+  });
+  // Frames (pages, PDFs) may only show hive content; a page can't navigate itself to the web.
+  w.webContents.on('will-frame-navigate', (e) => {
+    if (e.isMainFrame) return;
+    if (/^(basalt-page|basalt-file|basalt-plugin):/i.test(e.url) || e.url === 'about:blank' || e.url.startsWith('about:srcdoc')) return;
+    e.preventDefault();
   });
   w.webContents.on('will-navigate', (e, url) => {
     if (isDev && url.startsWith(process.env.ELECTRON_RENDERER_URL!)) return;
@@ -582,19 +661,29 @@ if (MCP_MODE) {
         const h = requireHive();
         const url = new URL(request.url);
         const rel = safeRelPath(decodeURIComponent(url.pathname.replace(/^\/+/, '')));
+        // HTML only ever runs as a page (basalt-page:, sandboxed); here it's just text.
+        if (/\.(x?html?|xml)$/i.test(rel)) return new Response(await fs.readFile(h.abs(rel), 'utf8'), { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-Content-Type-Options': 'nosniff' } });
         return net.fetch(pathToFileURL(h.abs(rel)).toString());
       } catch {
         return new Response('Not found', { status: 404 });
       }
     });
+    protocol.handle(PLUGIN_SCHEME, (request) => (hive ? pluginResponse(pluginsDir(), request.url) : new Response('No hive is open', { status: 404 })));
+    protocol.handle(PAGE_SCHEME, (request) => {
+      if (!hive) return new Response('No hive is open', { status: 404 });
+      const h = hive;
+      return pageResponse((rel) => h.abs(rel), request.url);
+    });
 
     if (!isDev) {
       session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
+        if (details.url.startsWith(`${PAGE_SCHEME}:`)) return cb({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [PAGE_CSP] } });
+        if (details.url.startsWith(`${PLUGIN_SCHEME}:`)) return cb({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [PLUGIN_CSP] } });
         cb({
           responseHeaders: {
             ...details.responseHeaders,
             'Content-Security-Policy': [
-              "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: basalt-file: https:; font-src 'self' data:; connect-src 'self' basalt-file:; frame-src 'none'; object-src 'none'; base-uri 'none'",
+              "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: basalt-file: https:; font-src 'self' data:; connect-src 'self' basalt-file:; frame-src basalt-page: basalt-file: basalt-plugin:; object-src 'none'; base-uri 'none'",
             ],
           },
         });

@@ -1,8 +1,8 @@
 import { useRef, useSyncExternalStore } from 'react';
 import { LinkResolver, extOf, isNote } from '@basalt/core/browser';
-import type { HiveSnapshot, NoteSummary } from '../../shared/api';
+import type { HiveSnapshot, NoteSummary, PluginInfo, PluginPermission } from '../../shared/api';
 
-export type ViewKind = 'note' | 'canvas' | 'comb' | 'image' | 'pdf' | 'file' | 'empty' | 'search' | 'table';
+export type ViewKind = 'note' | 'page' | 'canvas' | 'comb' | 'image' | 'pdf' | 'file' | 'empty' | 'search' | 'table';
 export type EditMode = 'live' | 'source' | 'reading';
 
 export interface Tab {
@@ -15,6 +15,8 @@ export interface Tab {
   hIndex: number;
   /** Line to scroll to on open. */
   line?: number;
+  /** Mind-map notes: show the Markdown instead of the map. */
+  mapText?: boolean;
   /** For table views: the query. */
   query?: string;
 }
@@ -26,7 +28,7 @@ export interface PaneState {
 }
 
 export type LeftView = 'files' | 'search' | 'tags' | 'bookmarks';
-export type RightView = 'backlinks' | 'outline' | 'properties' | 'comb' | 'related' | 'assistant';
+export type RightView = 'backlinks' | 'outline' | 'properties' | 'comb' | 'related' | 'assistant' | 'plugins';
 export type Theme = 'comb' | 'basalt' | 'auto';
 
 export interface Toast {
@@ -75,6 +77,8 @@ export interface State {
   palette: { mode: PaletteMode; query: string; payload?: string } | null;
   settingsOpen: string | null;
   recoveryFor: string | null;
+  /** The Illustrate dialog: what to start from. */
+  illustrate: { source: 'note' | 'sketch' | 'picture'; kind?: 'mindmap' | 'flowchart' | 'sequence' | 'chart' } | null;
   toasts: Toast[];
   prompt: PromptState | null;
   bookmarks: Bookmark[];
@@ -88,6 +92,11 @@ export interface State {
   enabledSnippets: string[];
   /** This hive's own icon (emoji) and colour, from .basalt/appearance.json. */
   hiveIdentity: { icon?: string; color?: string };
+  /** Plugins in .basalt/plugins, and which are on with what they were allowed. */
+  plugins: PluginInfo[];
+  pluginsEnabled: Record<string, PluginPermission[]>;
+  /** Status bar text set by running plugins, by plugin id. */
+  pluginStatus: Record<string, string>;
   /** In a pop-out window: the note it shows. Pop-outs don't save the workspace layout. */
   popout: string | null;
 }
@@ -125,6 +134,7 @@ let state: State = {
   palette: null,
   settingsOpen: null,
   recoveryFor: null,
+  illustrate: null,
   toasts: [],
   prompt: null,
   bookmarks: [],
@@ -136,6 +146,9 @@ let state: State = {
   snippets: [],
   enabledSnippets: [],
   hiveIdentity: {},
+  plugins: [],
+  pluginsEnabled: {},
+  pluginStatus: {},
   popout: null,
 };
 
@@ -195,6 +208,7 @@ export function viewKindFor(path: string): ViewKind {
   const ext = extOf(path);
   if (isNote(path)) return 'note';
   if (ext === 'canvas') return 'canvas';
+  if (ext === 'html' || ext === 'htm') return 'page';
   if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'].includes(ext)) return 'image';
   if (ext === 'pdf') return 'pdf';
   return 'file';

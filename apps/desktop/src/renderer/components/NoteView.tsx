@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Tag, Button } from '@basalt/ui';
 import { dirOf } from '@basalt/core/browser';
 import { Editor } from './Editor';
-import { api, consumeTitleFocus, openLink, renamePath, showSearch } from '../lib/actions';
+import { MindmapView } from './MindmapView';
+import { api, consumeTitleFocus, openLink, renamePath, setMapText, showSearch } from '../lib/actions';
 import { hydrate, renderNoteHtml } from '../lib/render';
 import { activeTab, setMode, type Tab } from '../lib/store-bridge';
 import { useStore } from '../lib/store';
@@ -111,8 +112,10 @@ export function NoteView({ tab, isActive }: { tab: Tab; isActive: boolean }) {
   const path = tab.path!;
   const note = useStore((s) => s.notesByPath.get(path));
   const readable = useStore((s) => s.hive?.info.settings.editor.readableLineLength ?? true);
+  const isMap = note?.view === 'mindmap';
+  const showMap = isMap && !tab.mapText;
   return (
-    <div className={`note-view${readable ? ' readable' : ''}`}>
+    <div className={`note-view${readable && !showMap ? ' readable' : ''}${showMap ? ' is-map' : ''}`}>
       <div className="note-scroll">
         <header className="note-head">
           <InlineTitle key={path} path={path} />
@@ -125,13 +128,18 @@ export function NoteView({ tab, isActive }: { tab: Tab; isActive: boolean }) {
               </Tag>
             ))}
             <span className="note-mode">
-              <Button size="sm" variant="quiet" aria-pressed={tab.mode === 'reading'} onClick={() => setMode(tab.mode === 'reading' ? 'live' : 'reading')}>
+              {isMap ? (
+                <Button size="sm" variant="quiet" title={showMap ? "Edit the Markdown behind this map" : "Back to the map"} onClick={() => setMapText(showMap)}>
+                  {showMap ? 'Text' : 'Map'}
+                </Button>
+              ) : null}
+              {showMap ? null : <Button size="sm" variant="quiet" aria-pressed={tab.mode === 'reading'} onClick={() => setMode(tab.mode === 'reading' ? 'live' : 'reading')}>
                 {tab.mode === 'reading' ? 'Edit' : 'Read'}
-              </Button>
+              </Button>}
             </span>
           </div>
         </header>
-        {tab.mode === 'reading' ? <Reading path={path} line={tab.line} /> : <Editor key={tab.id} tabId={tab.id} path={path} mode={tab.mode} line={tab.line} focus={isActive && activeTab()?.id === tab.id} />}
+        {showMap ? <MindmapView key={tab.id} path={path} focus={isActive && activeTab()?.id === tab.id} /> : tab.mode === 'reading' ? <Reading path={path} line={tab.line} /> : <Editor key={tab.id} tabId={tab.id} path={path} mode={tab.mode} line={tab.line} focus={isActive && activeTab()?.id === tab.id} />}
       </div>
     </div>
   );

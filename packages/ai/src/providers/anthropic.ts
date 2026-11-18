@@ -17,7 +17,11 @@ export class AnthropicProvider implements ChatProvider {
         model: this.config.model || DEFAULT_CLAUDE_MODEL,
         max_tokens: req.maxTokens ?? 64000,
         system: req.system,
-        messages: req.messages,
+        messages: req.messages.map((m) =>
+          m.images?.length
+            ? { role: m.role, content: [...m.images.map((i) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: i.mediaType, data: i.data } })), { type: 'text' as const, text: m.content }] }
+            : { role: m.role, content: m.content },
+        ),
         output_config: { effort: this.config.effort ?? 'medium' },
         betas: ['server-side-fallback-2026-07-01'],
         fallbacks: 'default',

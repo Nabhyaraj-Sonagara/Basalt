@@ -9,6 +9,7 @@ import { Assistant } from './Assistant';
 import { useAppearance } from '../lib/appearance';
 import { api, errorToast, openPath } from '../lib/actions';
 import { activeTab, getState, noteTitle, setState, toast, useStore, type RightView } from '../lib/store';
+import { PLUGIN_SANDBOX, pluginUrl, registerPluginWindow } from '../lib/plugins';
 
 function useActiveNotePath(): string | null {
   return useStore((s) => {
@@ -227,6 +228,45 @@ function Related({ path }: { path: string }) {
   );
 }
 
+function PluginPanel({ id, name, panel }: { id: string; name: string; panel: string }) {
+  const [unregister, setUnregister] = useState<(() => void) | null>(null);
+  useEffect(() => () => unregister?.(), [unregister]);
+  return (
+    <section className="plugin-panel">
+      <div className="panel-label">{name}</div>
+      <iframe
+        sandbox={PLUGIN_SANDBOX}
+        title={`${name} panel`}
+        data-plugin={id}
+        ref={(el) => {
+          // Register the window before the panel's scripts can message us.
+          if (el && !unregister) setUnregister(() => registerPluginWindow(el.contentWindow, id));
+        }}
+        src={pluginUrl(id, panel)}
+      />
+    </section>
+  );
+}
+
+function PluginPanels() {
+  const plugins = useStore((s) => s.plugins);
+  const enabled = useStore((s) => s.pluginsEnabled);
+  const shown = plugins.filter((p) => p.manifest?.panel && enabled[p.manifest.id]);
+  if (!shown.length)
+    return (
+      <EmptyState compact icon="command" title="No plugin panels">
+        Plugins with a panel show it here once they're on (Settings → Plugins).
+      </EmptyState>
+    );
+  return (
+    <div className="plugin-panels">
+      {shown.map((p) => (
+        <PluginPanel key={p.manifest!.id} id={p.manifest!.id} name={p.manifest!.name} panel={p.manifest!.panel!} />
+      ))}
+    </div>
+  );
+}
+
 export const PANELS: { id: RightView; icon: IconName; label: string }[] = [
   { id: 'backlinks', icon: 'backlinks', label: 'Backlinks' },
   { id: 'outline', icon: 'note', label: 'Outline' },
@@ -234,6 +274,7 @@ export const PANELS: { id: RightView; icon: IconName; label: string }[] = [
   { id: 'comb', icon: 'comb', label: 'Comb' },
   { id: 'related', icon: 'wikilink', label: 'Related' },
   { id: 'assistant', icon: 'highlight', label: 'Assistant' },
+  { id: 'plugins', icon: 'command', label: 'Plugins' },
 ];
 
 export function RightPanel() {
@@ -241,8 +282,10 @@ export function RightPanel() {
   const path = useActiveNotePath();
   const isNote = useStore((s) => activeTab(s)?.kind === 'note');
   const hidden = useAppearance().hiddenPanels;
-  const panels = PANELS.filter((p) => !hidden.includes(p.id) || p.id === view);
+  const hasPluginPanels = useStore((s) => s.plugins.some((p) => p.manifest?.panel && s.pluginsEnabled[p.manifest.id]));
+  const panels = PANELS.filter((p) => (!hidden.includes(p.id) || p.id === view) && (p.id !== 'plugins' || hasPluginPanels || view === 'plugins'));
   const body = () => {
+    if (view === 'plugins') return <PluginPanels />;
     if (view === 'assistant') return <Assistant notePath={isNote ? path : null} />;
     if (view === 'comb') return <LocalComb path={path} />;
     if (!path || !isNote) return <EmptyState compact icon="note" title="No note open">Open a note to see this.</EmptyState>;

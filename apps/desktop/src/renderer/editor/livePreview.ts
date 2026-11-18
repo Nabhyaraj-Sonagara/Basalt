@@ -9,6 +9,7 @@ import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemir
 import { extOf, parseLinktext, splitFrontmatter, escapeHtml, subpathText } from '@basalt/core/browser';
 import { getState } from '../lib/store';
 import { renderNoteHtml, hydrate } from '../lib/render';
+import { PAGE_SANDBOX, isPagePath, pageUrl } from '../lib/pages';
 import { iconSvg } from '../lib/icons';
 
 export interface LiveContext {
@@ -93,6 +94,32 @@ class ImageWidget extends WidgetType {
     img.alt = this.alt;
     if (this.width) img.width = Number(this.width);
     return img;
+  }
+}
+
+/** ![[page.html|height]]: the page, live, in its sandbox. */
+class PageWidget extends WidgetType {
+  constructor(
+    readonly path: string,
+    readonly height: number,
+    readonly version: number,
+  ) {
+    super();
+  }
+  eq(o: PageWidget) {
+    return o.path === this.path && o.height === this.height && o.version === this.version;
+  }
+  toDOM() {
+    const f = document.createElement('iframe');
+    f.className = 'bs-embed-page cm-embed-page';
+    f.setAttribute('sandbox', PAGE_SANDBOX);
+    f.src = pageUrl(this.path);
+    f.title = this.path;
+    f.style.height = `${this.height}px`;
+    return f;
+  }
+  ignoreEvent() {
+    return true;
   }
 }
 
@@ -321,6 +348,12 @@ function build(state: EditorState, ctx: LiveContext): DecorationSet {
         if (IMAGE.has(ext)) {
           const width = /^\d+/.exec(display ?? '')?.[0];
           decos.push(Decoration.replace({ widget: new ImageWidget(window.basalt.hive.fileUrl(resolved), target, width) }).range(from, to));
+          continue;
+        }
+        if (isPagePath(resolved)) {
+          const height = Math.max(120, Math.min(2000, Number.parseInt(display ?? '', 10) || 360));
+          const mtime = s.hive?.files.find((f) => f.path === resolved)?.mtime ?? 0;
+          decos.push(Decoration.replace({ widget: new PageWidget(resolved, height, mtime) }).range(from, to));
           continue;
         }
         if (ext === 'md') {

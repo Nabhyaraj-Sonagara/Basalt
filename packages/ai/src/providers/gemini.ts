@@ -7,6 +7,10 @@ const BASE = 'https://generativelanguage.googleapis.com/v1beta';
 export class GeminiProvider implements ChatProvider {
   constructor(readonly config: ProviderConfig) {}
 
+  private get base(): string {
+    return (this.config.baseUrl || BASE).replace(/\/+$/, '');
+  }
+
   private headers() {
     return { 'content-type': 'application/json', 'x-goog-api-key': this.config.apiKey ?? '' };
   }
@@ -14,10 +18,13 @@ export class GeminiProvider implements ChatProvider {
   async *stream(req: ChatRequest): AsyncIterable<string> {
     const body = {
       ...(req.system ? { systemInstruction: { parts: [{ text: req.system }] } } : {}),
-      contents: req.messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+      contents: req.messages.map((m) => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [...(m.images ?? []).map((i) => ({ inlineData: { mimeType: i.mediaType, data: i.data } })), { text: m.content }],
+      })),
       ...(req.maxTokens ? { generationConfig: { maxOutputTokens: req.maxTokens } } : {}),
     };
-    const res = await fetch(`${BASE}/models/${encodeURIComponent(this.config.model)}:streamGenerateContent?alt=sse`, {
+    const res = await fetch(`${this.base}/models/${encodeURIComponent(this.config.model)}:streamGenerateContent?alt=sse`, {
       method: 'POST',
       headers: this.headers(),
       body: JSON.stringify(body),
@@ -36,7 +43,7 @@ export class GeminiProvider implements ChatProvider {
   }
 
   async listModels(): Promise<string[]> {
-    const res = await fetch(`${BASE}/models?pageSize=200`, { headers: this.headers() });
+    const res = await fetch(`${this.base}/models?pageSize=200`, { headers: this.headers() });
     if (!res.ok) throw await httpError(res, this.config.label);
     const j = (await res.json()) as { models?: { name: string; supportedGenerationMethods?: string[] }[] };
     return (j.models ?? []).filter((m) => m.supportedGenerationMethods?.includes('generateContent')).map((m) => m.name.replace(/^models\//, ''));

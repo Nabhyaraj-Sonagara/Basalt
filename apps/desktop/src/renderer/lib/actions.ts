@@ -1,5 +1,6 @@
-import { buildBasaltUri, dirOf, extOf, isNote } from '@basalt/core/browser';
+import { buildBasaltUri, dirOf, extOf, isNote, mindNode, outlineFromNote, serializeMindmap, type MindNode } from '@basalt/core/browser';
 import type { HiveChange, UriRequest } from '../../shared/api';
+import { STARTER_PAGE } from './pages';
 import {
   activePane,
   activeTab,
@@ -193,7 +194,7 @@ export async function createNote(name = 'Untitled', opts: { folder?: string; exa
   try {
     const folder = opts.folder ?? newNoteFolder(activeTab()?.path ?? '');
     const path = opts.exactPath || !folder ? `${name}` : `${folder}/${name}`;
-    const created = await api().hive.create(isNote(path) || extOf(path) === 'canvas' ? path : `${path}.md`, opts.text ?? '', opts.template);
+    const created = await api().hive.create(isNote(path) || ['canvas', 'html', 'htm'].includes(extOf(path)) ? path : `${path}.md`, opts.text ?? '', opts.template);
     refreshSnapshot();
     return created;
   } catch (err) {
@@ -223,6 +224,47 @@ export function consumeTitleFocus(path: string): boolean {
 export async function newCanvas(): Promise<void> {
   const path = await createNote('Untitled.canvas', { folder: newNoteFolder(activeTab()?.path ?? '') });
   if (path) openPath(path);
+}
+
+/** A new HTML page from the starter, opened as source so it can be written straight away. */
+export async function newPage(): Promise<void> {
+  const path = await createNote('Untitled page.html', { folder: newNoteFolder(activeTab()?.path ?? ''), text: STARTER_PAGE });
+  if (!path) return;
+  openPath(path);
+  const pane = activePane();
+  const tab = activeTab();
+  if (tab?.path === path) updateTab(pane.id, tab.id, { mode: 'source' });
+}
+
+/** A new mind-map note: a root idea and one branch, opened in the map view. */
+export async function newMindmap(): Promise<void> {
+  const path = await createNote('Mind map', { folder: newNoteFolder(activeTab()?.path ?? ''), text: serializeMindmap(mindNode('Mind map', [mindNode('First branch')])) });
+  if (path) openPath(path);
+}
+
+/** Saves a tree as a new mind-map note next to `nearPath` and opens it. */
+export async function saveMindmapNote(name: string, root: MindNode, nearPath?: string): Promise<string | null> {
+  const path = await createNote(name, { folder: nearPath != null ? dirOf(nearPath) : newNoteFolder(activeTab()?.path ?? ''), text: serializeMindmap(root) });
+  if (path) openPath(path);
+  return path;
+}
+
+/** Builds a mind map from a note's headings and lists, as a new note beside it. */
+export async function mindmapFromNote(path: string): Promise<void> {
+  const title = getState().notesByPath.get(path)?.title ?? path.replace(/^.*\//, '').replace(/\.md$/i, '');
+  const root = outlineFromNote(await api().hive.read(path), title);
+  if (!root.children.length) {
+    toast({ tone: 'neutral', title: 'Nothing to map yet', body: 'Add some headings or a bulleted list, or ask the assistant to map this note.' });
+    return;
+  }
+  await saveMindmapNote(`${title} map`, root, path);
+}
+
+/** Mind-map notes: switch between the map and the Markdown behind it. */
+export function setMapText(text: boolean): void {
+  const pane = activePane();
+  const tab = activeTab();
+  if (tab?.kind === 'note') updateTab(pane.id, tab.id, { mapText: text });
 }
 
 export function closeTab(paneId: string, tabId: string): void {

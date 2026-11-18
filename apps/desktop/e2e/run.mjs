@@ -1,10 +1,11 @@
 // End-to-end check of the built desktop app on a copy of the sample hive.
 // Usage: xvfb-run -a node apps/desktop/e2e/run.mjs [screenshot-dir]
 import { createRequire } from 'node:module';
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 
 const { _electron: electron } = createRequire(import.meta.url)('playwright');
 const root = resolve(import.meta.dirname, '../../..');
@@ -22,17 +23,40 @@ const userData = mkdtempSync(join(tmpdir(), 'basalt-ud-'));
 // A fake home folder, so "Connect" writes AI app configs there and never to the real ones.
 const fakeHome = mkdtempSync(join(tmpdir(), 'basalt-home-'));
 mkdirSync(join(fakeHome, '.codex'));
+// A stand-in for a local Ollama server with a model that can see pictures.
+const modelRequests = [];
+const fakeModel = createServer((req, res) => {
+  let raw = '';
+  req.on('data', (c) => (raw += c));
+  req.on('end', () => {
+    if (req.url === '/api/tags') return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ models: [{ name: 'llava:13b' }] }));
+    if (req.url === '/v1/chat/completions') {
+      const body = JSON.parse(raw);
+      modelRequests.push(body);
+      const system = body.messages[0].content;
+      const answer = /mind map/i.test(system) ? '# Welcome\n\n- Try things\n  - Comb view\n- Install' : 'Here it is:\n```mermaid\nflowchart TD\n  A["Idea"] --> B["Ship"]\n```';
+      res.writeHead(200, { 'content-type': 'text/event-stream' });
+      res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: answer } }] })}\n\n`);
+      return res.end('data: [DONE]\n\n');
+    }
+    res.writeHead(404).end();
+  });
+});
+await new Promise((r) => fakeModel.listen(0, '127.0.0.1', r));
+const fakeModelUrl = `http://127.0.0.1:${fakeModel.address().port}`;
+
 const launch = (extra) =>
   electron.launch({
     executablePath: createRequire(import.meta.url)('electron'),
     args: [join(root, 'apps/desktop'), '--no-sandbox', `--user-data-dir=${userData}`, ...extra],
-    env: { ...process.env, BASALT_NO_UPDATES: '1', BASALT_CONNECT_HOME: fakeHome, XDG_CONFIG_HOME: join(fakeHome, '.config'), CODEX_HOME: join(fakeHome, '.codex') },
+    env: { ...process.env, BASALT_NO_UPDATES: '1', BASALT_CONNECT_HOME: fakeHome, XDG_CONFIG_HOME: join(fakeHome, '.config'), CODEX_HOME: join(fakeHome, '.codex'), BASALT_OLLAMA_URL: fakeModelUrl, BASALT_LMSTUDIO_URL: 'http://127.0.0.1:9' },
   });
 let app = await launch([`--hive=${hive}`]);
 let page = await app.firstWindow();
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
-page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+// Errors from HTML pages are the pages' own (the probe page triggers blocked requests on purpose).
+page.on('console', (m) => m.type() === 'error' && !/^basalt-(page|plugin):/.test(m.location().url) && errors.push(`${m.text()} @ ${m.location().url}`));
 await page.setViewportSize({ width: 1360, height: 860 });
 const shot = (name) => page.screenshot({ path: join(out, `${name}.png`) });
 const results = [];
@@ -41,7 +65,9 @@ async function step(name, fn) {
     await fn();
     results.push(['ok', name]);
   } catch (e) {
-    results.push(['FAIL', name, e.message.split('\n')[0]]);
+    // First line, plus Playwright's reason when an action kept retrying (covered, moving, hidden…).
+    const why = e.message.split('\n').filter((l) => /intercepts pointer|not stable|not visible|outside of the viewport|detached/.test(l)).slice(-2).map((l) => l.trim());
+    results.push(['FAIL', name, [e.message.split('\n')[0], ...why].join(' | ')]);
     await shot(`fail-${name.replace(/\W+/g, '-')}`).catch(() => {});
   }
 }
@@ -299,6 +325,249 @@ await step('connect Codex to the hive with one click', async () => {
   assert.match(toml, /--mcp/);
   await page.screenshot({ path: join(out, '17-connect-apps.png') });
   await page.keyboard.press('Escape');
+});
+
+// Toasts sit over the lower right of the window; close them before clicking around a canvas.
+const clearToasts = async () => {
+  for (const b of await page.locator('.bs-toast-close').all()) await b.click().catch(() => {});
+};
+
+await step('mind map: new map, branches by keyboard, saved as Markdown', async () => {
+  await clearToasts();
+  await palette('New mind map');
+  await page.waitForSelector('.mm-node.depth-0');
+  assert.equal(await page.inputValue('.note-title'), 'Mind map');
+  await page.locator('.mm-node.depth-0').click();
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('Sketches');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('[[Welcome]]');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('Read it');
+  await page.keyboard.press('Enter');
+  // Rename by typing over a selected branch.
+  await page.locator('.mm-node', { hasText: 'Sketches' }).click();
+  await page.keyboard.press('F2');
+  await page.keyboard.press(`${mod}+A`);
+  await page.keyboard.type('Drawings');
+  await page.keyboard.press('Enter');
+  await sleep(700);
+  const md = read('Mind map.md');
+  assert.match(md, /^view: mindmap$/m);
+  assert.match(md, /^# Mind map$/m);
+  assert.match(md, /^- First branch\n- Drawings\n- \[\[Welcome\]\]\n  - Read it$/m);
+  assert.equal(await page.locator('.mm-link').count(), 1);
+  await sleep(200);
+  await shot('18-mind-map');
+});
+
+await step('mind map: folds, deletes and switches to the Markdown', async () => {
+  await clearToasts();
+  await page.locator('.mm-node', { hasText: 'Drawings' }).click();
+  await page.keyboard.press('ArrowDown');
+  assert.equal(await page.locator('.mm-node.selected .mm-link').innerText(), 'Welcome');
+  await page.keyboard.press(' ');
+  assert.equal(await page.locator('.mm-node', { hasText: 'Read it' }).count(), 0);
+  await page.locator('.mm-more').click({ timeout: 5001 });
+  await page.locator('.mm-node', { hasText: 'First branch' }).click({ timeout: 5002 });
+  await page.keyboard.press('Delete');
+  await sleep(600);
+  assert.doesNotMatch(read('Mind map.md'), /First branch/);
+  await page.locator('.note-mode button:has-text("Text")').click({ timeout: 5003 });
+  await page.waitForSelector('.cm-content');
+  assert.match(await page.locator('.cm-content').innerText(), /Drawings/);
+  await page.locator('.note-mode button:has-text("Map")').click();
+  await page.waitForSelector('.mm-node.depth-0');
+});
+
+await step('create a mind map from a note', async () => {
+  await page.keyboard.press(`${mod}+O`);
+  await page.keyboard.type('Welcome');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('.cm-content');
+  await palette('Create a mind map from this note');
+  await page.waitForSelector('.mm-node.depth-0');
+  assert.equal(await page.inputValue('.note-title'), 'Welcome map');
+  assert.ok(await page.locator('.mm-node', { hasText: 'What to try' }).isVisible());
+  const md = read('Welcome map.md');
+  assert.match(md, /^# Welcome to your hive\n\n- What to try\n  - Open the comb view/m);
+  assert.match(md, /- Open the comb view/);
+  await shot('19-mind-map-from-note');
+});
+
+await step('illustrate a sketch into a flowchart with a local model', async () => {
+  await page.keyboard.press(`${mod}+,`);
+  await page.locator('.settings-nav button:text("Assistant")').click();
+  const local = page.locator('.bs-setting', { hasText: 'Ollama' }).first();
+  await local.locator('button:has-text("Use")').click();
+  await page.getByText('Using llava:13b in Ollama').waitFor({ timeout: 5000 });
+  await page.keyboard.press('Escape');
+  await page.keyboard.press(`${mod}+O`);
+  await page.keyboard.type('Welcome');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('.cm-content');
+  await page.locator('.cm-content').click();
+  await page.keyboard.press(`${mod}+End`);
+  await palette('Illustrate a sketch or photo');
+  const pad = page.locator('canvas.sketch-canvas');
+  const box = await pad.boundingBox();
+  await page.mouse.move(box.x + 60, box.y + 60);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(box.x + 60 + i * 25, box.y + 60 + i * 12);
+  await page.mouse.up();
+  await page.locator('.dialog-illustrate select').selectOption('flowchart');
+  await shot('20-illustrate-sketch');
+  await page.locator('.dialog-illustrate button:has-text("Illustrate")').last().click();
+  await page.waitForSelector('.dialog-illustrate', { state: 'detached', timeout: 15000 });
+  await sleep(800);
+  const sent = modelRequests.at(-1);
+  assert.equal(sent.model, 'llava:13b');
+  assert.match(sent.messages[1].content[1].image_url.url, /^data:image\/png;base64,/);
+  const md = read('Welcome.md');
+  assert.match(md, /```mermaid\nflowchart TD\n  A\["Idea"\] --> B\["Ship"\]\n```/);
+  const pic = /!\[\[(Attachments\/Sketch [^\]]+\.png)\]\]/.exec(md);
+  assert.ok(pic, 'the sketch is saved and embedded');
+  assert.ok(existsSync(join(hive, pic[1])));
+  await page.keyboard.press(`${mod}+E`);
+  await page.waitForSelector('.reading .mermaid-block svg', { timeout: 15000 });
+  await page.locator('.reading .mermaid-block').scrollIntoViewIfNeeded();
+  await shot('21-illustrated-flowchart');
+  await page.keyboard.press(`${mod}+E`);
+});
+
+await step('ask the assistant to map a note', async () => {
+  await palette('Ask the assistant to illustrate this note');
+  assert.equal(await page.locator('.dialog-illustrate select').inputValue(), 'mindmap');
+  await page.locator('.dialog-illustrate button:has-text("Illustrate")').last().click();
+  await page.waitForSelector('.mm-node.depth-0', { timeout: 15000 });
+  assert.equal(await page.inputValue('.note-title'), 'Welcome map 1');
+  const md = read('Welcome map 1.md');
+  assert.match(md, /^source: "\[\[Welcome\]\]"$/m);
+  assert.match(md, /^- Try things\n  - Comb view\n- Install$/m);
+  assert.match(modelRequests.at(-1).messages[1].content, /Welcome to your hive/);
+});
+
+await step('HTML page: create, run, and edit the source', async () => {
+  await palette('New HTML page');
+  await page.waitForSelector('.page-source .cm-content');
+  assert.match(read('Untitled page.html'), /<h1>New page<\/h1>/);
+  await page.locator('.page-source .cm-content').click();
+  await page.keyboard.press(`${mod}+End`);
+  await page.keyboard.type('Edited in Basalt');
+  await sleep(800);
+  assert.match(read('Untitled page.html'), /<\/html>\nEdited in Basalt$/);
+  await page.locator('.page-bar button:has-text("Preview")').click();
+  const frame = page.frameLocator('iframe.page-frame');
+  await frame.locator('h1').waitFor();
+  await frame.locator('#hello').click();
+  assert.equal(await frame.locator('#out').innerText(), 'Clicked 1 time');
+  await shot('22-html-page');
+});
+
+await step('HTML page: hive assets load, but no network and no access to Basalt', async () => {
+  mkdirSync(join(hive, 'Pages'), { recursive: true });
+  writeFileSync(join(hive, 'Pages/page.css'), 'body { background: rgb(1, 2, 3); }');
+  writeFileSync(join(hive, 'Pages/app.js'), 'document.getElementById("asset").textContent = "asset script ran";');
+  writeFileSync(
+    join(hive, 'Pages/Probe.html'),
+    `<!doctype html><link rel="stylesheet" href="page.css"><p id="asset"></p><p id="iso"></p><p id="net"></p><p id="note"></p>
+<script src="app.js"></script>
+<script>
+  try { window.parent.document.title; document.getElementById('iso').textContent = 'reached Basalt'; } catch { document.getElementById('iso').textContent = 'isolated'; }
+  fetch('https://example.com').then(() => (document.getElementById('net').textContent = 'network reached'), () => (document.getElementById('net').textContent = 'network blocked'));
+  fetch('Welcome.md').then(() => (document.getElementById('note').textContent = 'note read'), () => (document.getElementById('note').textContent = 'notes blocked'));
+</script>`,
+  );
+  writeFileSync(join(hive, 'Page embed.md'), '# Page embed\n\n![[Probe.html|180]]\n');
+  await sleep(700);
+  // Keys go to a page while it has focus (like any web content); click back into Basalt first.
+  await page.locator('.page-bar .page-title').click();
+  await page.keyboard.press(`${mod}+O`);
+  await page.keyboard.type('Page embed');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('iframe.bs-embed-page');
+  const frame = page.frameLocator('iframe.bs-embed-page');
+  await frame.locator('#asset:has-text("asset script ran")').waitFor({ timeout: 10000 });
+  await frame.locator('#net:not(:empty)').waitFor({ timeout: 10000 });
+  await frame.locator('#note:not(:empty)').waitFor({ timeout: 10000 });
+  assert.equal(await frame.locator('#iso').innerText(), 'isolated');
+  assert.equal(await frame.locator('#net').innerText(), 'network blocked');
+  assert.equal(await frame.locator('#note').innerText(), 'notes blocked');
+  assert.equal(await frame.locator('body').evaluate((b) => getComputedStyle(b).backgroundColor), 'rgb(1, 2, 3)');
+  assert.equal(Math.round((await page.locator('iframe.bs-embed-page').boundingBox()).height), 180);
+  await page.keyboard.press(`${mod}+E`);
+  await page.waitForSelector('.reading iframe.bs-embed-page');
+  await page.keyboard.press(`${mod}+E`);
+  await shot('23-html-page-embed');
+});
+
+await step('plugins: turn on with approval, run commands, permissions enforced', async () => {
+  const dir = join(hive, '.basalt/plugins');
+  cpSync(join(root, 'examples/plugins/word-goal'), join(dir, 'word-goal'), { recursive: true });
+  mkdirSync(join(dir, 'e2e-probe'), { recursive: true });
+  writeFileSync(join(dir, 'e2e-probe/manifest.json'), JSON.stringify({ id: 'e2e-probe', name: 'E2E probe', version: '0.1.0', permissions: ['read'] }));
+  writeFileSync(
+    join(dir, 'e2e-probe/main.js'),
+    `basalt.commands.add({ id: 'title', name: 'Show title' }, async () => basalt.ui.toast('Open: ' + (await basalt.notes.active()).title));
+basalt.commands.add({ id: 'write', name: 'Try to write' }, () => basalt.editor.insert('should not appear'));
+let net = 'no network';
+fetch('https://example.com').then(() => (net = 'network!'), () => {}).finally(() => basalt.ui.status('probe ready, ' + net + ', ' + (typeof require) + ', ' + (() => { try { return parent.document ? 'parent!' : ''; } catch { return 'isolated'; } })()));`,
+  );
+  await page.keyboard.press(`${mod}+O`);
+  await page.keyboard.type('Welcome');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('.cm-content');
+  await page.keyboard.press(`${mod}+,`);
+  await page.locator('.settings-nav button:text("Plugins")').click();
+  await page.locator('button:has-text("Reload")').click();
+  for (const name of ['E2E probe', 'Word goal']) {
+    const row = page.locator('.bs-setting', { hasText: name });
+    await row.locator('[role=switch]').click();
+    await page.locator('.dialog button:has-text("Turn on")').click();
+    await page.locator('.dialog').waitFor({ state: 'detached' });
+  }
+  assert.match(await page.locator('.bs-setting', { hasText: 'Word goal' }).innerText(), /read your notes and create and change notes/i);
+  await page.screenshot({ path: join(out, '24-plugin-settings.png') });
+  await page.keyboard.press('Escape');
+  const cfg = JSON.parse(read('.basalt/plugins.json'));
+  assert.deepEqual(cfg.enabled['e2e-probe'].permissions, ['read']);
+  await page.locator('.plugin-status[data-plugin="e2e-probe"]').waitFor({ timeout: 10000 });
+  assert.equal(await page.locator('.plugin-status[data-plugin="e2e-probe"]').innerText(), 'probe ready, no network, undefined, isolated');
+  await page.waitForFunction(() => /^Goal \d+% of 500$/.test(document.querySelector('.plugin-status[data-plugin="word-goal"]')?.textContent ?? ''), null, { timeout: 10000 });
+
+  await palette('E2E probe: Show title');
+  await page.getByText('Open: Welcome').waitFor({ timeout: 5000 });
+  await palette('E2E probe: Try to write');
+  await page.getByText(/wasn't allowed to create and change notes/).waitFor({ timeout: 5000 });
+  assert.doesNotMatch(read('Welcome.md'), /should not appear/);
+
+  await page.locator('.cm-content').click();
+  await page.keyboard.press(`${mod}+End`);
+  await palette('Word goal: Insert timestamp');
+  await sleep(900);
+  assert.match(read('Welcome.md'), new RegExp(String(new Date().getFullYear())));
+
+  await page.locator('.right-panel [title="Plugins"]').click();
+  const panel = page.frameLocator('.plugin-panel iframe');
+  await panel.locator('#list li').first().waitFor({ timeout: 10000 });
+  assert.ok((await panel.locator('#list li').count()) >= 3);
+  await shot('25-plugin-panel');
+});
+
+await step('plugins: turning one off removes its commands', async () => {
+  await page.keyboard.press(`${mod}+,`);
+  await page.locator('.settings-nav button:text("Plugins")').click();
+  await page.locator('.bs-setting', { hasText: 'E2E probe' }).locator('[role=switch]').click();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press(`${mod}+P`);
+  await page.keyboard.type('E2E probe');
+  await sleep(300);
+  assert.equal(await page.locator('.palette-wrap li[role="option"]', { hasText: 'E2E probe' }).count(), 0);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('.plugin-status[data-plugin="e2e-probe"]').count(), 0);
+  assert.equal(JSON.parse(read('.basalt/plugins.json')).enabled['e2e-probe'], undefined);
 });
 
 await step('no renderer errors', async () => {

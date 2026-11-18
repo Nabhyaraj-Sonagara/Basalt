@@ -4,6 +4,10 @@ import {
   confirmTrash,
   go,
   newCanvas,
+  newMindmap,
+  newPage,
+  mindmapFromNote,
+  setMapText,
   newNote,
   openComb,
   openDailyNote,
@@ -39,6 +43,7 @@ export interface Command {
 
 const hasNote = () => activeTab()?.kind === 'note';
 const hasFile = () => !!activeTab()?.path;
+const isMapNote = () => hasNote() && getState().notesByPath.get(activeTab()!.path!)?.view === 'mindmap';
 
 export const COMMANDS: Command[] = [
   { id: 'palette', name: 'Open command palette', icon: 'command', hotkey: 'Mod+P', run: () => setState({ palette: { mode: 'commands', query: '' } }) },
@@ -46,6 +51,12 @@ export const COMMANDS: Command[] = [
   { id: 'new-note', name: 'New note', icon: 'new-note', hotkey: 'Mod+N', run: () => newNote() },
   { id: 'new-note-tab', name: 'New note in a new tab', icon: 'new-note', hotkey: 'Mod+Shift+N', run: () => newNote({ newTab: true }) },
   { id: 'new-canvas', name: 'New canvas', icon: 'comb', run: () => newCanvas() },
+  { id: 'new-page', name: 'New HTML page', icon: 'external', run: () => newPage() },
+  { id: 'new-mindmap', name: 'New mind map', icon: 'wikilink', run: () => newMindmap() },
+  { id: 'mindmap-from-note', name: 'Create a mind map from this note', icon: 'wikilink', when: () => hasNote() && !isMapNote(), run: () => mindmapFromNote(activeTab()!.path!) },
+  { id: 'mindmap-toggle', name: 'Switch between map and text', icon: 'wikilink', when: isMapNote, run: () => setMapText(!activeTab()!.mapText) },
+  { id: 'illustrate', name: 'Illustrate a sketch or photo', icon: 'highlight', hotkey: 'Mod+Shift+K', run: () => setState({ illustrate: { source: 'sketch' } }) },
+  { id: 'illustrate-note', name: 'Ask the assistant to illustrate this note', icon: 'highlight', when: hasNote, run: () => setState({ illustrate: { source: 'note', kind: 'mindmap' } }) },
   { id: 'new-folder', name: 'New folder', icon: 'folder', run: () => promptNewFolder() },
   { id: 'daily', name: "Open today's daily note", icon: 'daily', hotkey: 'Mod+Shift+D', run: () => openDailyNote(0) },
   { id: 'daily-prev', name: "Open yesterday's daily note", icon: 'daily', run: () => openDailyNote(-1) },

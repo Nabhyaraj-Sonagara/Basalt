@@ -1,0 +1,9 @@
+{
+  "id": "word-goal",
+  "name": "Word goal",
+  "version": "1.0.0",
+  "description": "Shows progress toward a word goal in the status bar, adds an Insert timestamp command, and lists your longest notes in a panel.",
+  "author": "Basalt",
+  "permissions": ["read", "write"],
+  "panel": "panel.html"
+}
