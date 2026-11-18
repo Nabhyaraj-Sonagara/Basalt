@@ -50,6 +50,26 @@ export interface ChatStart {
   context: { notePath?: string; selection?: string; useHive: boolean };
 }
 
+export type PluginPermission = 'read' | 'write';
+
+export interface PluginManifest {
+  id: string;
+  name: string;
+  version: string;
+  description?: string;
+  author?: string;
+  permissions: PluginPermission[];
+  main: string;
+  panel?: string;
+}
+
+/** A folder in .basalt/plugins: its manifest, or why it can't load. */
+export interface PluginInfo {
+  folder: string;
+  manifest?: PluginManifest;
+  error?: string;
+}
+
 export interface IllustrateRequest {
   /** Lets the renderer cancel the request. */
   id?: string;
@@ -205,6 +225,13 @@ export interface BasaltApi {
     setPaused(paused: boolean): Promise<SyncStatus>;
     now(): Promise<SyncStatus>;
     onStatus(cb: (s: SyncStatus) => void): () => void;
+  };
+  plugins: {
+    list(): Promise<PluginInfo[]>;
+    /** Asks for a plugin folder and copies it into this hive; resolves with its id, or null if cancelled. */
+    install(): Promise<string | null>;
+    remove(id: string): Promise<void>;
+    reveal(): Promise<void>;
   };
   connect: {
     status(): Promise<ConnectStatus[]>;

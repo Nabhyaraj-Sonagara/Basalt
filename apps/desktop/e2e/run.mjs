@@ -56,7 +56,7 @@ let page = await app.firstWindow();
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 // Errors from HTML pages are the pages' own (the probe page triggers blocked requests on purpose).
-page.on('console', (m) => m.type() === 'error' && !m.location().url.startsWith('basalt-page:') && errors.push(`${m.text()} @ ${m.location().url}`));
+page.on('console', (m) => m.type() === 'error' && !/^basalt-(page|plugin):/.test(m.location().url) && errors.push(`${m.text()} @ ${m.location().url}`));
 await page.setViewportSize({ width: 1360, height: 860 });
 const shot = (name) => page.screenshot({ path: join(out, `${name}.png`) });
 const results = [];
@@ -501,6 +501,73 @@ await step('HTML page: hive assets load, but no network and no access to Basalt'
   await page.waitForSelector('.reading iframe.bs-embed-page');
   await page.keyboard.press(`${mod}+E`);
   await shot('23-html-page-embed');
+});
+
+await step('plugins: turn on with approval, run commands, permissions enforced', async () => {
+  const dir = join(hive, '.basalt/plugins');
+  cpSync(join(root, 'examples/plugins/word-goal'), join(dir, 'word-goal'), { recursive: true });
+  mkdirSync(join(dir, 'e2e-probe'), { recursive: true });
+  writeFileSync(join(dir, 'e2e-probe/manifest.json'), JSON.stringify({ id: 'e2e-probe', name: 'E2E probe', version: '0.1.0', permissions: ['read'] }));
+  writeFileSync(
+    join(dir, 'e2e-probe/main.js'),
+    `basalt.commands.add({ id: 'title', name: 'Show title' }, async () => basalt.ui.toast('Open: ' + (await basalt.notes.active()).title));
+basalt.commands.add({ id: 'write', name: 'Try to write' }, () => basalt.editor.insert('should not appear'));
+let net = 'no network';
+fetch('https://example.com').then(() => (net = 'network!'), () => {}).finally(() => basalt.ui.status('probe ready, ' + net + ', ' + (typeof require) + ', ' + (() => { try { return parent.document ? 'parent!' : ''; } catch { return 'isolated'; } })()));`,
+  );
+  await page.keyboard.press(`${mod}+O`);
+  await page.keyboard.type('Welcome');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('.cm-content');
+  await page.keyboard.press(`${mod}+,`);
+  await page.locator('.settings-nav button:text("Plugins")').click();
+  await page.locator('button:has-text("Reload")').click();
+  for (const name of ['E2E probe', 'Word goal']) {
+    const row = page.locator('.bs-setting', { hasText: name });
+    await row.locator('[role=switch]').click();
+    await page.locator('.dialog button:has-text("Turn on")').click();
+    await page.locator('.dialog').waitFor({ state: 'detached' });
+  }
+  assert.match(await page.locator('.bs-setting', { hasText: 'Word goal' }).innerText(), /read your notes and create and change notes/i);
+  await page.screenshot({ path: join(out, '24-plugin-settings.png') });
+  await page.keyboard.press('Escape');
+  const cfg = JSON.parse(read('.basalt/plugins.json'));
+  assert.deepEqual(cfg.enabled['e2e-probe'].permissions, ['read']);
+  await page.locator('.plugin-status[data-plugin="e2e-probe"]').waitFor({ timeout: 10000 });
+  assert.equal(await page.locator('.plugin-status[data-plugin="e2e-probe"]').innerText(), 'probe ready, no network, undefined, isolated');
+  await page.waitForFunction(() => /^Goal \d+% of 500$/.test(document.querySelector('.plugin-status[data-plugin="word-goal"]')?.textContent ?? ''), null, { timeout: 10000 });
+
+  await palette('E2E probe: Show title');
+  await page.getByText('Open: Welcome').waitFor({ timeout: 5000 });
+  await palette('E2E probe: Try to write');
+  await page.getByText(/wasn't allowed to create and change notes/).waitFor({ timeout: 5000 });
+  assert.doesNotMatch(read('Welcome.md'), /should not appear/);
+
+  await page.locator('.cm-content').click();
+  await page.keyboard.press(`${mod}+End`);
+  await palette('Word goal: Insert timestamp');
+  await sleep(900);
+  assert.match(read('Welcome.md'), new RegExp(String(new Date().getFullYear())));
+
+  await page.locator('.right-panel [title="Plugins"]').click();
+  const panel = page.frameLocator('.plugin-panel iframe');
+  await panel.locator('#list li').first().waitFor({ timeout: 10000 });
+  assert.ok((await panel.locator('#list li').count()) >= 3);
+  await shot('25-plugin-panel');
+});
+
+await step('plugins: turning one off removes its commands', async () => {
+  await page.keyboard.press(`${mod}+,`);
+  await page.locator('.settings-nav button:text("Plugins")').click();
+  await page.locator('.bs-setting', { hasText: 'E2E probe' }).locator('[role=switch]').click();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press(`${mod}+P`);
+  await page.keyboard.type('E2E probe');
+  await sleep(300);
+  assert.equal(await page.locator('.palette-wrap li[role="option"]', { hasText: 'E2E probe' }).count(), 0);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('.plugin-status[data-plugin="e2e-probe"]').count(), 0);
+  assert.equal(JSON.parse(read('.basalt/plugins.json')).enabled['e2e-probe'], undefined);
 });
 
 await step('no renderer errors', async () => {

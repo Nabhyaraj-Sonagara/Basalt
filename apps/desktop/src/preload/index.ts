@@ -38,6 +38,7 @@ const api: BasaltApi = {
     ...(group('sync', ['status', 'setServer', 'signUp', 'signIn', 'signOut', 'usage', 'remoteHives', 'connect', 'disconnect', 'setPaused', 'now']) as unknown as Omit<BasaltApi['sync'], 'onStatus'>),
     onStatus: (cb) => subscribe('sync:status', cb),
   },
+  plugins: group('plugins', ['list', 'install', 'remove', 'reveal']) as unknown as BasaltApi['plugins'],
   connect: group('connect', ['status', 'add', 'remove', 'launchCommand']) as unknown as BasaltApi['connect'],
   ai: {
     ...(group('ai', ['signInOpenRouter', 'detectLocal', 'useLocal', 'presets', 'settings', 'saveProvider', 'removeProvider', 'setChatProvider', 'setEmbeddings', 'listModels', 'chat', 'cancel', 'illustrate', 'cancelIllustrate', 'semanticSearch', 'related', 'reindex']) as unknown as Omit<

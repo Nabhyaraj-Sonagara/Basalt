@@ -3,6 +3,7 @@ import { Button, Kbd, Select, SettingRow, SettingsGroup, Toggle, Icon } from '@b
 import type { HiveSettings } from '@basalt/core/browser';
 import type { AiSettings, ProviderSettings, UpdateStatus } from '../../shared/api';
 import { SyncSection } from './SyncSettings';
+import { PluginSettings } from './PluginSettings';
 import { AppearanceSettings } from './AppearanceSettings';
 import { ConnectApps, QuickStart } from './ConnectSettings';
 import { COMMANDS, eventToHotkey, formatHotkey, hotkeyFor } from '../lib/commands';
@@ -17,6 +18,7 @@ const SECTIONS = [
   { id: 'hotkeys', label: 'Hotkeys' },
   { id: 'assistant', label: 'Assistant' },
   { id: 'agents', label: 'AI apps and agents' },
+  { id: 'plugins', label: 'Plugins' },
   { id: 'sync', label: 'Sync' },
   { id: 'about', label: 'About and updates' },
 ];
@@ -440,6 +442,15 @@ function AboutSection() {
 export function Settings() {
   const open = useStore((s) => s.settingsOpen);
   const hasHive = useStore((s) => !!s.hive);
+  // Escape closes Settings even when focus has left it (e.g. after a confirmation dialog closed).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !e.defaultPrevented && !getState().prompt) setState({ settingsOpen: null });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
   if (!open || !hasHive) return null;
   const close = () => setState({ settingsOpen: null });
   return (
@@ -462,6 +473,7 @@ export function Settings() {
           {open === 'hotkeys' ? <HotkeysSection /> : null}
           {open === 'assistant' ? <AssistantSection /> : null}
           {open === 'agents' ? <AgentsSection /> : null}
+          {open === 'plugins' ? <PluginSettings /> : null}
           {open === 'sync' ? <SyncSection /> : null}
           {open === 'about' ? <AboutSection /> : null}
         </div>

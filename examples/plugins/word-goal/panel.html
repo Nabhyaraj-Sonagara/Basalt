@@ -1,0 +1,24 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 13px/1.5 system-ui, sans-serif; margin: 8px; }
+  ol { padding-left: 20px; margin: 0; }
+  a { color: inherit; cursor: pointer; }
+</style>
+<strong>Longest notes</strong>
+<ol id="list"></ol>
+<script>
+  // The SDK (window.basalt) is added to panel pages automatically.
+  basalt.notes.list().then((notes) => {
+    const list = document.getElementById('list');
+    for (const n of notes.sort((a, b) => b.words - a.words).slice(0, 8)) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.textContent = `${n.title} (${n.words})`;
+      a.onclick = () => basalt.notes.open(n.path);
+      li.append(a);
+      list.append(li);
+    }
+  });
+</script>
