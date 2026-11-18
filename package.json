@@ -1,7 +1,7 @@
 {
   "name": "basalt",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Basalt: an AI-friendly, local-first Markdown notes app.",
   "type": "module",
   "workspaces": [
