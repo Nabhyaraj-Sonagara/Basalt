@@ -338,7 +338,7 @@ mark { background: var(--pollen); color: var(--on-honey); border-radius: var(--r
 .dialog { background: var(--surface-raised); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: var(--space-6); width: 440px; max-width: calc(100vw - 32px); display: flex; flex-direction: column; gap: var(--space-4); }
 .dialog-wide { width: 720px; }
 .dialog h2 { margin: 0; font: var(--type-heading); letter-spacing: var(--type-heading-tracking); }
-.dialog p { margin: 0; font: var(--type-prose-small); color: var(--ink-muted); }
+.dialog p { margin: 0; font: var(--type-prose-small); color: var(--ink-muted); white-space: pre-line; }
 .dialog-field { display: flex; flex-direction: column; gap: var(--space-1); font: var(--type-caption); color: var(--ink-muted); }
 .dialog-field input { height: 34px; }
 .dialog-textarea { height: auto; padding: var(--space-3); font: var(--type-code); resize: vertical; }
@@ -488,3 +488,10 @@ mark { background: var(--pollen); color: var(--on-honey); border-radius: var(--r
 .page-source .cm-editor.cm-focused { outline: none; }
 .page-source .cm-gutters { background: var(--surface-sunken); border-right: 1px solid var(--line); color: var(--ink-muted); }
 .bs-embed-page { display: block; width: 100%; border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fff; margin: var(--space-3) 0; }
+
+/* ---------- plugins ---------- */
+.plugin-host { position: fixed; width: 0; height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
+.plugin-host iframe { width: 0; height: 0; border: 0; }
+.plugin-status { color: var(--ink-muted); }
+.plugin-panels { display: flex; flex-direction: column; gap: var(--space-3); }
+.plugin-panel iframe { display: block; width: 100%; height: 260px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: #fff; }

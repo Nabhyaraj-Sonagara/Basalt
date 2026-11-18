@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, net, protocol, safeStorage, sessio
 import { existsSync, promises as fs } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { Hive, parseBasaltUri, safeRelPath, type HiveEvent } from '@basalt/core';
+import { CONFIG_DIR, Hive, parseBasaltUri, safeRelPath, type HiveEvent } from '@basalt/core';
 import {
   PROVIDER_PRESETS,
   SemanticIndex,
@@ -22,6 +22,7 @@ import { startMcpMode } from './mcp-mode';
 import { connectClient, connectStatus, disconnectClient, mcpLaunchCommand } from './connect';
 import { detectLocalModels, signInWithOpenRouter } from './openrouter';
 import { PAGE_CSP, PAGE_SCHEME, pageResponse } from './pages';
+import { PLUGIN_CSP, PLUGIN_SCHEME, listPlugins, parseManifest, pluginResponse } from './plugins';
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL;
 const here = import.meta.dirname;
@@ -32,6 +33,8 @@ if (!MCP_MODE) protocol.registerSchemesAsPrivileged([
   { scheme: 'basalt-file', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } },
   // HTML pages from the hive; see pages.ts for how they're fenced in.
   { scheme: PAGE_SCHEME, privileges: { standard: true, secure: true, stream: true } },
+  // Plugins from .basalt/plugins; see plugins.ts.
+  { scheme: PLUGIN_SCHEME, privileges: { standard: true, secure: true, stream: true } },
 ]);
 
 // ---------- persisted app state ----------
@@ -295,6 +298,8 @@ function trustedSender(e: Electron.IpcMainInvokeEvent): boolean {
   return url.startsWith(pathToFileURL(join(here, '../renderer/')).toString());
 }
 
+const pluginsDir = () => join(requireHive().root, CONFIG_DIR, 'plugins');
+
 function handle(channel: string, fn: (this: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown) {
   ipcMain.handle(channel, async (e, ...args) => {
     if (!trustedSender(e)) throw new Error(`Blocked ${channel} from an untrusted frame`);
@@ -366,6 +371,31 @@ function registerIpc() {
   });
   handle('app:openExternal', (url: string) => {
     if (/^(https?|mailto):/i.test(url)) return shell.openExternal(url);
+  });
+  handle('plugins:list', () => listPlugins(pluginsDir()));
+  handle('plugins:reveal', async () => {
+    await fs.mkdir(pluginsDir(), { recursive: true });
+    await shell.openPath(pluginsDir());
+  });
+  handle('plugins:install', async function () {
+    const parent = BrowserWindow.fromWebContents(this.sender) ?? undefined;
+    const pick = await (parent ? dialog.showOpenDialog(parent, { title: 'Choose a plugin folder', properties: ['openDirectory'] }) : dialog.showOpenDialog({ title: 'Choose a plugin folder', properties: ['openDirectory'] }));
+    if (pick.canceled || !pick.filePaths[0]) return null;
+    const src = pick.filePaths[0];
+    const raw = JSON.parse(await fs.readFile(join(src, 'manifest.json'), 'utf8').catch(() => {
+      throw new Error("That folder has no manifest.json, so it isn't a Basalt plugin.");
+    }));
+    const id = String((raw as { id?: unknown }).id ?? '');
+    const manifest = parseManifest(raw, id);
+    const dest = join(pluginsDir(), manifest.id);
+    if (resolve(src) === resolve(dest)) return manifest.id;
+    await fs.rm(dest, { recursive: true, force: true });
+    await fs.cp(src, dest, { recursive: true, filter: (f) => !/[\\/](node_modules|\.git)([\\/]|$)/.test(f) });
+    return manifest.id;
+  });
+  handle('plugins:remove', async (id: string) => {
+    if (!/^[a-z0-9][a-z0-9-]{1,40}$/.test(String(id))) throw new Error('Unknown plugin');
+    await shell.trashItem(join(pluginsDir(), id));
   });
   handle('app:showInFolder', (path: string) => shell.showItemInFolder(requireHive().abs(path)));
   handle('app:cliCommand', () => {
@@ -577,7 +607,7 @@ function createWindow(popout?: string) {
   // Frames (pages, PDFs) may only show hive content; a page can't navigate itself to the web.
   w.webContents.on('will-frame-navigate', (e) => {
     if (e.isMainFrame) return;
-    if (/^(basalt-page|basalt-file):/i.test(e.url) || e.url === 'about:blank' || e.url.startsWith('about:srcdoc')) return;
+    if (/^(basalt-page|basalt-file|basalt-plugin):/i.test(e.url) || e.url === 'about:blank' || e.url.startsWith('about:srcdoc')) return;
     e.preventDefault();
   });
   w.webContents.on('will-navigate', (e, url) => {
@@ -638,6 +668,7 @@ if (MCP_MODE) {
         return new Response('Not found', { status: 404 });
       }
     });
+    protocol.handle(PLUGIN_SCHEME, (request) => (hive ? pluginResponse(pluginsDir(), request.url) : new Response('No hive is open', { status: 404 })));
     protocol.handle(PAGE_SCHEME, (request) => {
       if (!hive) return new Response('No hive is open', { status: 404 });
       const h = hive;
@@ -647,11 +678,12 @@ if (MCP_MODE) {
     if (!isDev) {
       session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
         if (details.url.startsWith(`${PAGE_SCHEME}:`)) return cb({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [PAGE_CSP] } });
+        if (details.url.startsWith(`${PLUGIN_SCHEME}:`)) return cb({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [PLUGIN_CSP] } });
         cb({
           responseHeaders: {
             ...details.responseHeaders,
             'Content-Security-Policy': [
-              "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: basalt-file: https:; font-src 'self' data:; connect-src 'self' basalt-file:; frame-src basalt-page: basalt-file:; object-src 'none'; base-uri 'none'",
+              "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: basalt-file: https:; font-src 'self' data:; connect-src 'self' basalt-file:; frame-src basalt-page: basalt-file: basalt-plugin:; object-src 'none'; base-uri 'none'",
             ],
           },
         });
