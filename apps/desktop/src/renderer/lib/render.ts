@@ -3,6 +3,7 @@ import hljs from 'highlight.js/lib/common';
 import { escapeHtml, renderMarkdown, subpathText, extOf } from '@basalt/core/browser';
 import { iconSvg } from './icons';
 import { getState } from './store';
+import { PAGE_SANDBOX, isPagePath, pageUrl } from './pages';
 
 const IMAGE = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif']);
 
@@ -18,6 +19,11 @@ export function renderNoteHtml(text: string, sourcePath: string): string {
     embed: (path, target, _subpath, display) => {
       if (!path) return `<span class="bs-embed-missing">${escapeHtml(target)} isn't written yet</span>`;
       const ext = extOf(path);
+      if (isPagePath(path)) {
+        // ![[page.html|420]] sets the height in pixels.
+        const h = Math.max(120, Math.min(2000, Number.parseInt(display ?? '', 10) || 360));
+        return `<iframe class="bs-embed-page" sandbox="${PAGE_SANDBOX}" src="${pageUrl(path)}" style="height:${h}px" title="${escapeHtml(path)}"></iframe>`;
+      }
       if (ext === 'pdf') return `<iframe class="bs-embed-pdf" src="${window.basalt.hive.fileUrl(path)}" title="${escapeHtml(display ?? target)}"></iframe>`;
       if (['mp3', 'wav', 'ogg', 'm4a', 'flac'].includes(ext)) return `<audio controls src="${window.basalt.hive.fileUrl(path)}"></audio>`;
       if (['mp4', 'webm', 'mov'].includes(ext)) return `<video controls src="${window.basalt.hive.fileUrl(path)}"></video>`;

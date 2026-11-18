@@ -2,7 +2,7 @@ import { useRef, useSyncExternalStore } from 'react';
 import { LinkResolver, extOf, isNote } from '@basalt/core/browser';
 import type { HiveSnapshot, NoteSummary } from '../../shared/api';
 
-export type ViewKind = 'note' | 'canvas' | 'comb' | 'image' | 'pdf' | 'file' | 'empty' | 'search' | 'table';
+export type ViewKind = 'note' | 'page' | 'canvas' | 'comb' | 'image' | 'pdf' | 'file' | 'empty' | 'search' | 'table';
 export type EditMode = 'live' | 'source' | 'reading';
 
 export interface Tab {
@@ -200,6 +200,7 @@ export function viewKindFor(path: string): ViewKind {
   const ext = extOf(path);
   if (isNote(path)) return 'note';
   if (ext === 'canvas') return 'canvas';
+  if (ext === 'html' || ext === 'htm') return 'page';
   if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'].includes(ext)) return 'image';
   if (ext === 'pdf') return 'pdf';
   return 'file';

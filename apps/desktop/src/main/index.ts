@@ -21,6 +21,7 @@ import { SyncController } from './sync';
 import { startMcpMode } from './mcp-mode';
 import { connectClient, connectStatus, disconnectClient, mcpLaunchCommand } from './connect';
 import { detectLocalModels, signInWithOpenRouter } from './openrouter';
+import { PAGE_CSP, PAGE_SCHEME, pageResponse } from './pages';
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL;
 const here = import.meta.dirname;
@@ -29,6 +30,8 @@ const MCP_MODE = process.argv.includes('--mcp');
 
 if (!MCP_MODE) protocol.registerSchemesAsPrivileged([
   { scheme: 'basalt-file', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, corsEnabled: true } },
+  // HTML pages from the hive; see pages.ts for how they're fenced in.
+  { scheme: PAGE_SCHEME, privileges: { standard: true, secure: true, stream: true } },
 ]);
 
 // ---------- persisted app state ----------
@@ -571,6 +574,12 @@ function createWindow(popout?: string) {
     if (/^https?:/i.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
+  // Frames (pages, PDFs) may only show hive content; a page can't navigate itself to the web.
+  w.webContents.on('will-frame-navigate', (e) => {
+    if (e.isMainFrame) return;
+    if (/^(basalt-page|basalt-file):/i.test(e.url) || e.url === 'about:blank' || e.url.startsWith('about:srcdoc')) return;
+    e.preventDefault();
+  });
   w.webContents.on('will-navigate', (e, url) => {
     if (isDev && url.startsWith(process.env.ELECTRON_RENDERER_URL!)) return;
     e.preventDefault();
@@ -622,19 +631,27 @@ if (MCP_MODE) {
         const h = requireHive();
         const url = new URL(request.url);
         const rel = safeRelPath(decodeURIComponent(url.pathname.replace(/^\/+/, '')));
+        // HTML only ever runs as a page (basalt-page:, sandboxed); here it's just text.
+        if (/\.(x?html?|xml)$/i.test(rel)) return new Response(await fs.readFile(h.abs(rel), 'utf8'), { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-Content-Type-Options': 'nosniff' } });
         return net.fetch(pathToFileURL(h.abs(rel)).toString());
       } catch {
         return new Response('Not found', { status: 404 });
       }
     });
+    protocol.handle(PAGE_SCHEME, (request) => {
+      if (!hive) return new Response('No hive is open', { status: 404 });
+      const h = hive;
+      return pageResponse((rel) => h.abs(rel), request.url);
+    });
 
     if (!isDev) {
       session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
+        if (details.url.startsWith(`${PAGE_SCHEME}:`)) return cb({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [PAGE_CSP] } });
         cb({
           responseHeaders: {
             ...details.responseHeaders,
             'Content-Security-Policy': [
-              "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: basalt-file: https:; font-src 'self' data:; connect-src 'self' basalt-file:; frame-src 'none'; object-src 'none'; base-uri 'none'",
+              "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: basalt-file: https:; font-src 'self' data:; connect-src 'self' basalt-file:; frame-src basalt-page: basalt-file:; object-src 'none'; base-uri 'none'",
             ],
           },
         });

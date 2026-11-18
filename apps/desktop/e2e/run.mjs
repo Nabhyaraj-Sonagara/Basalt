@@ -1,7 +1,7 @@
 // End-to-end check of the built desktop app on a copy of the sample hive.
 // Usage: xvfb-run -a node apps/desktop/e2e/run.mjs [screenshot-dir]
 import { createRequire } from 'node:module';
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import assert from 'node:assert/strict';
@@ -55,7 +55,8 @@ let app = await launch([`--hive=${hive}`]);
 let page = await app.firstWindow();
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
-page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+// Errors from HTML pages are the pages' own (the probe page triggers blocked requests on purpose).
+page.on('console', (m) => m.type() === 'error' && !m.location().url.startsWith('basalt-page:') && errors.push(`${m.text()} @ ${m.location().url}`));
 await page.setViewportSize({ width: 1360, height: 860 });
 const shot = (name) => page.screenshot({ path: join(out, `${name}.png`) });
 const results = [];
@@ -446,6 +447,60 @@ await step('ask the assistant to map a note', async () => {
   assert.match(md, /^source: "\[\[Welcome\]\]"$/m);
   assert.match(md, /^- Try things\n  - Comb view\n- Install$/m);
   assert.match(modelRequests.at(-1).messages[1].content, /Welcome to your hive/);
+});
+
+await step('HTML page: create, run, and edit the source', async () => {
+  await palette('New HTML page');
+  await page.waitForSelector('.page-source .cm-content');
+  assert.match(read('Untitled page.html'), /<h1>New page<\/h1>/);
+  await page.locator('.page-source .cm-content').click();
+  await page.keyboard.press(`${mod}+End`);
+  await page.keyboard.type('Edited in Basalt');
+  await sleep(800);
+  assert.match(read('Untitled page.html'), /<\/html>\nEdited in Basalt$/);
+  await page.locator('.page-bar button:has-text("Preview")').click();
+  const frame = page.frameLocator('iframe.page-frame');
+  await frame.locator('h1').waitFor();
+  await frame.locator('#hello').click();
+  assert.equal(await frame.locator('#out').innerText(), 'Clicked 1 time');
+  await shot('22-html-page');
+});
+
+await step('HTML page: hive assets load, but no network and no access to Basalt', async () => {
+  mkdirSync(join(hive, 'Pages'), { recursive: true });
+  writeFileSync(join(hive, 'Pages/page.css'), 'body { background: rgb(1, 2, 3); }');
+  writeFileSync(join(hive, 'Pages/app.js'), 'document.getElementById("asset").textContent = "asset script ran";');
+  writeFileSync(
+    join(hive, 'Pages/Probe.html'),
+    `<!doctype html><link rel="stylesheet" href="page.css"><p id="asset"></p><p id="iso"></p><p id="net"></p><p id="note"></p>
+<script src="app.js"></script>
+<script>
+  try { window.parent.document.title; document.getElementById('iso').textContent = 'reached Basalt'; } catch { document.getElementById('iso').textContent = 'isolated'; }
+  fetch('https://example.com').then(() => (document.getElementById('net').textContent = 'network reached'), () => (document.getElementById('net').textContent = 'network blocked'));
+  fetch('Welcome.md').then(() => (document.getElementById('note').textContent = 'note read'), () => (document.getElementById('note').textContent = 'notes blocked'));
+</script>`,
+  );
+  writeFileSync(join(hive, 'Page embed.md'), '# Page embed\n\n![[Probe.html|180]]\n');
+  await sleep(700);
+  // Keys go to a page while it has focus (like any web content); click back into Basalt first.
+  await page.locator('.page-bar .page-title').click();
+  await page.keyboard.press(`${mod}+O`);
+  await page.keyboard.type('Page embed');
+  await page.keyboard.press('Enter');
+  await page.waitForSelector('iframe.bs-embed-page');
+  const frame = page.frameLocator('iframe.bs-embed-page');
+  await frame.locator('#asset:has-text("asset script ran")').waitFor({ timeout: 10000 });
+  await frame.locator('#net:not(:empty)').waitFor({ timeout: 10000 });
+  await frame.locator('#note:not(:empty)').waitFor({ timeout: 10000 });
+  assert.equal(await frame.locator('#iso').innerText(), 'isolated');
+  assert.equal(await frame.locator('#net').innerText(), 'network blocked');
+  assert.equal(await frame.locator('#note').innerText(), 'notes blocked');
+  assert.equal(await frame.locator('body').evaluate((b) => getComputedStyle(b).backgroundColor), 'rgb(1, 2, 3)');
+  assert.equal(Math.round((await page.locator('iframe.bs-embed-page').boundingBox()).height), 180);
+  await page.keyboard.press(`${mod}+E`);
+  await page.waitForSelector('.reading iframe.bs-embed-page');
+  await page.keyboard.press(`${mod}+E`);
+  await shot('23-html-page-embed');
 });
 
 await step('no renderer errors', async () => {
